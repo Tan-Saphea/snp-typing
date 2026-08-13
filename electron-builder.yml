@@ -1,0 +1,26 @@
+appId: org.snp.typing
+productName: SNP Typing
+artifactName: SNP-Typing-Setup.${ext}
+asar: true
+directories:
+  output: release
+files:
+  - electron/**/*
+  - client/.next/standalone/**/*
+  - package.json
+asarUnpack:
+  - client/.next/standalone/**/*
+extraMetadata:
+  main: electron/main.cjs
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SNP Typing

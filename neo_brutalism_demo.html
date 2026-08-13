@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo-Brutalist UI Playground</title>
+  <!-- Load Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f7f9fb;
+    }
+    
+    /* Custom Neo-Brutalist transitions */
+    .neo-box, .neo-btn {
+      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+  </style>
+</head>
+<body class="p-6 md:p-12 text-slate-800">
+
+  <div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <header class="mb-10 text-center md:text-left">
+      <span class="text-xs font-black uppercase tracking-[0.2em] text-orange-600 bg-orange-100 px-3 py-1 rounded-full">UI Design Study</span>
+      <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 mt-3">Neo-Brutalist UI & Hard Shadows</h1>
+      <p class="text-slate-600 mt-2">Adjust details below to see how border-radius, border width, and hard offset shadows interact in real-time.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Interactive Controller Panel -->
+      <section class="lg:col-span-1 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col gap-6">
+        <h2 class="text-lg font-black text-slate-900 border-b pb-3">Controls</h2>
+        
+        <!-- Color Presets -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Color Scheme</label>
+          <div class="grid grid-cols-5 gap-2">
+            <button onclick="setTheme('orange')" class="h-8 rounded-lg bg-orange-500 border border-orange-600 cursor-pointer focus:outline-none" title="Orange"></button>
+            <button onclick="setTheme('blue')" class="h-8 rounded-lg bg-blue-500 border border-blue-600 cursor-pointer focus:outline-none" title="Blue"></button>
+            <button onclick="setTheme('emerald')" class="h-8 rounded-lg bg-emerald-500 border border-emerald-600 cursor-pointer focus:outline-none" title="Emerald"></button>
+            <button onclick="setTheme('violet')" class="h-8 rounded-lg bg-violet-500 border border-violet-600 cursor-pointer focus:outline-none" title="Violet"></button>
+            <button onclick="setTheme('dark')" class="h-8 rounded-lg bg-slate-800 border border-slate-950 cursor-pointer focus:outline-none" title="Dark Mode"></button>
+          </div>
+        </div>
+
+        <!-- Border Radius -->
+        <div>
+          <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            <span>Border Radius</span>
+            <span id="radius-val">16px</span>
+          </div>
+          <input type="range" id="radius-slider" min="0" max="36" value="16" class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-600" oninput="updateUI()">
+        </div>
+
+        <!-- Border Width -->
+        <div>
+          <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            <span>Border Width</span>
+            <span id="border-val">3px</span>
+          </div>
+          <input type="range" id="border-slider" min="1" max="8" value="3" class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-600" oninput="updateUI()">
+        </div>
+
+        <!-- Shadow Offset -->
+        <div>
+          <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            <span>Shadow Offset</span>
+            <span id="shadow-val">6px</span>
+          </div>
+          <input type="range" id="shadow-slider" min="0" max="16" value="6" class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-600" oninput="updateUI()">
+        </div>
+      </section>
+
+      <!-- Live Preview Area -->
+      <main class="lg:col-span-2 flex flex-col gap-6">
+        
+        <!-- Interactive Preview Box -->
+        <div class="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex items-center justify-center min-h-[250px]">
+          
+          <!-- Neo-Brutalist Box -->
+          <div id="preview-box" class="neo-box w-full max-w-2xl flex flex-col sm:flex-row items-center gap-6 p-6 bg-[#fdf6ec] border-[#ea580c] text-[#ea580c]" style="border-width: 3px; border-radius: 16px; box-shadow: 0px 6px 0px 0px #ea580c;">
+            <!-- Icon -->
+            <div class="flex-shrink-0">
+              <div id="icon-bg" class="w-16 h-16 rounded-2xl border-2 border-[#ea580c] bg-white flex items-center justify-center shadow-[0_3px_0_0_#ea580c] transition duration-150">
+                <svg class="w-10 h-10 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2">
+                  <circle cx="12" cy="13" r="8"></circle>
+                  <path d="M12 9v4l2.5 1.5"></path>
+                  <path d="M12 2v3"></path>
+                  <path d="M9 3h6"></path>
+                  <path d="M18.5 6.5l-1.5 1.5"></path>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 text-center sm:text-left">
+              <h3 class="text-2xl font-black mb-1">Want to get faster?</h3>
+              <p class="text-sm font-semibold opacity-90">Practice with our comprehensive curriculum!</p>
+            </div>
+
+            <!-- CTA Button -->
+            <div class="flex-shrink-0">
+              <button id="preview-btn" class="neo-btn px-6 py-3 font-black text-white bg-[#ea580c] border-[#9a3412] hover:-translate-y-[2px] active:translate-y-[4px] active:shadow-none focus:outline-none cursor-pointer" style="border-width: 3px; border-radius: 12px; box-shadow: 0px 4px 0px 0px #9a3412;">
+                J, F, and Space &rsaquo;
+              </button>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Generated Code Codeblocks -->
+        <div class="bg-slate-900 rounded-3xl p-6 text-slate-300 shadow-xl overflow-x-auto text-sm">
+          <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+            <span class="font-bold text-xs uppercase tracking-wider text-slate-400">Generated Code</span>
+            <div class="flex gap-2">
+              <button onclick="copyCode('tailwind')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-black rounded-lg cursor-pointer transition">Copy Tailwind</button>
+              <button onclick="copyCode('css')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-black rounded-lg cursor-pointer transition">Copy CSS</button>
+            </div>
+          </div>
+          
+          <div id="tailwind-code-container">
+            <p class="text-xs text-orange-400 font-mono mb-1">// Tailwind HTML Classes</p>
+            <pre id="tailwind-code" class="font-mono text-xs overflow-x-auto whitespace-pre-wrap text-emerald-400"></pre>
+          </div>
+
+          <div id="css-code-container" class="mt-4 border-t border-slate-800 pt-4">
+            <p class="text-xs text-orange-400 font-mono mb-1">// Vanilla CSS Rules</p>
+            <pre id="css-code" class="font-mono text-xs overflow-x-auto whitespace-pre-wrap text-sky-400"></pre>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // Style configurations for different themes
+    const themes = {
+      orange: {
+        bg: '#fdf6ec',
+        border: '#ea580c',
+        shadow: '#ea580c',
+        text: '#ea580c',
+        btnBg: '#ea580c',
+        btnBorder: '#9a3412',
+        btnShadow: '#9a3412'
+      },
+      blue: {
+        bg: '#ecf3fe',
+        border: '#0284c7',
+        shadow: '#0284c7',
+        text: '#0369a1',
+        btnBg: '#0284c7',
+        btnBorder: '#0369a1',
+        btnShadow: '#0369a1'
+      },
+      emerald: {
+        bg: '#ecfdf5',
+        border: '#059669',
+        shadow: '#059669',
+        text: '#047857',
+        btnBg: '#059669',
+        btnBorder: '#065f46',
+        btnShadow: '#065f46'
+      },
+      violet: {
+        bg: '#faf5ff',
+        border: '#7c3aed',
+        shadow: '#7c3aed',
+        text: '#6d28d9',
+        btnBg: '#7c3aed',
+        btnBorder: '#5b21b6',
+        btnShadow: '#5b21b6'
+      },
+      dark: {
+        bg: '#1e293b',
+        border: '#f8fafc',
+        shadow: '#f8fafc',
+        text: '#f8fafc',
+        btnBg: '#f8fafc',
+        btnBorder: '#cbd5e1',
+        btnShadow: '#94a3b8',
+        btnText: '#0f172a'
+      }
+    };
+
+    let currentTheme = 'orange';
+
+    function setTheme(themeName) {
+      currentTheme = themeName;
+      // Update accent color values of controls
+      const sliderColor = themeName === 'dark' ? '#f8fafc' : themes[themeName].border;
+      
+      const sliders = document.querySelectorAll('input[type="range"]');
+      sliders.forEach(slider => {
+        slider.style.setProperty('--accent-color', sliderColor);
+      });
+      
+      updateUI();
+    }
+
+    function updateUI() {
+      const radius = document.getElementById('radius-slider').value;
+      const border = document.getElementById('border-slider').value;
+      const shadow = document.getElementById('shadow-slider').value;
+
+      document.getElementById('radius-val').innerText = `${radius}px`;
+      document.getElementById('border-val').innerText = `${border}px`;
+      document.getElementById('shadow-val').innerText = `${shadow}px`;
+
+      const t = themes[currentTheme];
+      const box = document.getElementById('preview-box');
+      const icon = document.getElementById('icon-bg');
+      const btn = document.getElementById('preview-btn');
+
+      // Apply Box styles
+      box.style.borderRadius = `${radius}px`;
+      box.style.borderWidth = `${border}px`;
+      box.style.borderColor = t.border;
+      box.style.backgroundColor = t.bg;
+      box.style.color = t.text;
+      box.style.boxShadow = `0px ${shadow}px 0px 0px ${t.shadow}`;
+
+      // Apply Icon styles
+      icon.style.borderColor = t.border;
+      icon.style.boxShadow = `0px ${Math.max(1, Math.round(shadow / 2))}px 0px 0px ${t.shadow}`;
+
+      // Apply Button styles
+      btn.style.backgroundColor = t.btnBg;
+      btn.style.borderColor = t.btnBorder;
+      btn.style.color = t.btnText || '#ffffff';
+      btn.style.borderWidth = `${Math.max(2, border - 1)}px`;
+      btn.style.borderRadius = `${Math.max(6, radius - 4)}px`;
+      btn.style.boxShadow = `0px ${Math.max(2, Math.round(shadow * 0.7))}px 0px 0px ${t.btnShadow}`;
+
+      // Generate HTML & CSS representation
+      generateCodeBlocks(radius, border, shadow, t);
+    }
+
+    function generateCodeBlocks(radius, border, shadow, t) {
+      // Tailwind classes generator
+      const twCard = `class="rounded-[${radius}px] border-[${border}px] border-[${t.border}] bg-[${t.bg}] text-[${t.text}] shadow-[0_${shadow}px_0_0_${t.shadow}] p-6 flex flex-col sm:flex-row items-center gap-6"`;
+      const twBtn = `class="rounded-[${Math.max(6, radius - 4)}px] border-[${Math.max(2, border - 1)}px] border-[${t.btnBorder}] bg-[${t.btnBg}] text-[${t.btnText || '#fff'}] shadow-[0_${Math.max(2, Math.round(shadow * 0.7))}px_0_0_${t.btnShadow}] px-6 py-3 font-black transition active:translate-y-[${Math.max(2, Math.round(shadow * 0.7))}px] active:shadow-none"`;
+      
+      document.getElementById('tailwind-code').innerText = 
+`<div ${twCard}>
+  <div class="flex-shrink-0">
+    <div class="w-16 h-16 rounded-2xl border-2 border-[${t.border}] bg-white flex items-center justify-center shadow-[0_3px_0_0_${t.shadow}]">
+      <!-- Icon SVG here -->
+    </div>
+  </div>
+  <div class="flex-1">
+    <h3 class="text-2xl font-black">Want to get faster?</h3>
+    <p class="text-sm font-semibold opacity-90">Practice with our comprehensive curriculum!</p>
+  </div>
+  <button ${twBtn}>
+    J, F, and Space &rsaquo;
+  </button>
+</div>`;
+
+      // Vanilla CSS code generator
+      document.getElementById('css-code').innerText = 
+`.neo-brutal-card {
+  background-color: ${t.bg};
+  color: ${t.text};
+  border: ${border}px solid ${t.border};
+  border-radius: ${radius}px;
+  box-shadow: 0px ${shadow}px 0px 0px ${t.shadow};
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.neo-brutal-button {
+  background-color: ${t.btnBg};
+  color: ${t.btnText || '#ffffff'};
+  border: ${Math.max(2, border - 1)}px solid ${t.btnBorder};
+  border-radius: ${Math.max(6, radius - 4)}px;
+  box-shadow: 0px ${Math.max(2, Math.round(shadow * 0.7))}px 0px 0px ${t.btnShadow};
+  padding: 12px 24px;
+  font-weight: 900;
+  transition: all 0.1s ease;
+}
+
+.neo-brutal-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px ${Math.max(2, Math.round(shadow * 0.7)) + 2}px 0px 0px ${t.btnShadow};
+}
+
+.neo-brutal-button:active {
+  transform: translateY(${Math.max(2, Math.round(shadow * 0.7))}px);
+  box-shadow: 0px 0px 0px 0px transparent;
+}`;
+    }
+
+    function copyCode(type) {
+      const codeId = type === 'tailwind' ? 'tailwind-code' : 'css-code';
+      const text = document.getElementById(codeId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Code copied to clipboard!');
+      });
+    }
+
+    // Initialize UI
+    setTheme('orange');
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+import express from "express";
+import * as controller from "../controllers/settingsController.js";
+import { authenticate } from "../middleware/authenticate.js";
+import { authorize } from "../middleware/authorize.js";
+import { validate } from "../middleware/validate.js";
+import { preferencesSchema, schoolSettingsSchema } from "../validators/managementValidators.js";
+const router = express.Router();
+router.use(authenticate);
+router.get("/school", controller.getSchool);
+router.patch("/school", authorize("admin", "teacher"), validate(schoolSettingsSchema), controller.updateSchool);
+router.patch("/me", validate(preferencesSchema), controller.updatePreferences);
+export default router;

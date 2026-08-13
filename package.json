@@ -1,0 +1,40 @@
+{
+  "name": "snp-typing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SNP Typing educational desktop application",
+  "main": "electron/main.cjs",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web,desktop -c blue,magenta,green \"npm run dev -w @snp/server\" \"npm run dev -w @snp/client\" \"wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .\"",
+    "dev:client": "npm run dev -w @snp/client",
+    "dev:server": "npm run dev -w @snp/server",
+    "dev:electron": "wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .",
+    "build": "npm run build -w @snp/shared && npm run build -w @snp/client && npm run build -w @snp/server",
+    "test": "npm run test -w @snp/shared && npm run test -w @snp/server && npm run test -w @snp/client",
+    "lint": "npm run lint -w @snp/server && npm run lint -w @snp/client",
+    "seed": "npm run seed -w @snp/server",
+    "dist": "npm run build -w @snp/client && electron-builder --config electron-builder.yml --win --x64",
+    "make": "npm run dist"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "wait-on": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "allowScripts": {
+    "electron": true,
+    "bcrypt": true,
+    "esbuild": true
+  }
+}

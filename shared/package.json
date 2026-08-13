@@ -1,0 +1,14 @@
+{
+  "name": "@snp/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./typing": "./src/typing/index.js"
+  },
+  "scripts": {
+    "build": "node --check src/index.js && node --check src/typing/graphemes.js && node --check src/typing/lessonContent.js",
+    "test": "node --test"
+  }
+}

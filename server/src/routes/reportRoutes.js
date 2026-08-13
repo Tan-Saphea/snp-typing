@@ -1,0 +1,10 @@
+import express from "express";
+import * as controller from "../controllers/reportController.js";
+import { authenticate } from "../middleware/authenticate.js";
+import { authorize } from "../middleware/authorize.js";
+import { validate } from "../middleware/validate.js";
+import { reportQuerySchema } from "../validators/managementValidators.js";
+const router = express.Router();
+router.use(authenticate, authorize("admin", "teacher"));
+router.get("/summary", validate(reportQuerySchema), controller.summary);
+export default router;

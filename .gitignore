@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+coverage/
+.DS_Store
+*.log
+
+.env
+.env.*
+!.env.example
+
+tmp/
+source/*.pdf
+client/dist/
+client/.next/

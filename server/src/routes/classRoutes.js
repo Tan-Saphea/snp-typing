@@ -1,0 +1,12 @@
+import express from "express";
+import * as controller from "../controllers/classController.js";
+import { authenticate } from "../middleware/authenticate.js";
+import { authorize } from "../middleware/authorize.js";
+import { validate } from "../middleware/validate.js";
+import { createClassSchema, updateClassSchema } from "../validators/managementValidators.js";
+const router = express.Router();
+router.use(authenticate, authorize("admin", "teacher"));
+router.get("/", controller.list);
+router.post("/", validate(createClassSchema), controller.create);
+router.patch("/:classId", validate(updateClassSchema), controller.update);
+export default router;
