@@ -31,6 +31,6 @@ export const authenticate = asyncHandler(async (request, _response, next) => {
     throw new ApiError(401, "INVALID_ACCESS_TOKEN", "Your password changed. Please sign in again.");
   }
 
-  request.auth = { user, userId: user.id, role: user.role };
+  request.auth = { user, userId: user.id };
   next();
 });

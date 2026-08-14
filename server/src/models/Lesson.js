@@ -94,7 +94,6 @@ const lessonSchema = new mongoose.Schema(
     timeLimit: { type: Number, min: 0, default: 0 },
     starsEnabled: { type: Boolean, default: true },
     allowBackspace: { type: Boolean, default: true },
-    isLocked: { type: Boolean, default: false },
     prerequisiteLesson: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson" },
     isPublished: { type: Boolean, default: true, index: true },
     isActive: { type: Boolean, default: true, index: true },

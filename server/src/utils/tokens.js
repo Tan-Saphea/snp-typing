@@ -6,7 +6,7 @@ import { env } from "../config/env.js";
 
 export function signAccessToken(user) {
   return jwt.sign(
-    { role: user.role },
+    {},
     env.JWT_SECRET,
     {
       subject: user.id,

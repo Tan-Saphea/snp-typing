@@ -2,6 +2,7 @@ appId: org.snp.typing
 productName: SNP Typing
 artifactName: SNP-Typing-Setup.${ext}
 asar: true
+compression: maximum
 directories:
   output: release
 files:
@@ -13,6 +14,7 @@ asarUnpack:
 extraMetadata:
   main: electron/main.cjs
 win:
+  icon: build/icon.png
   target:
     - target: nsis
       arch:
@@ -20,7 +22,13 @@ win:
 nsis:
   oneClick: false
   perMachine: false
+  allowElevation: true
   allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
+  createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: SNP Typing
+  runAfterFinish: true
+  deleteAppDataOnUninstall: true
+  uninstallDisplayName: SNP Typing
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico

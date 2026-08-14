@@ -17,7 +17,7 @@ export default function ClientProviders({ children }) {
   return (
     <AppErrorBoundary>
       {status === "idle" || status === "restoring"
-        ? <FullPageLoader message="Opening your classroom…" />
+        ? <FullPageLoader message="Opening your learning space…" />
         : children}
     </AppErrorBoundary>
   );

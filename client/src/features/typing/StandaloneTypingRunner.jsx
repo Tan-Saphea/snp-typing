@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LuArrowLeft, LuClock3, LuGauge, LuKeyboard, LuTarget } from "react-icons/lu";
 
 import LessonResultModal from "./LessonResultModal.jsx";
 import TypingAdventureHud from "./TypingAdventureHud.jsx";
@@ -17,7 +18,6 @@ function clock(seconds) {
 }
 
 export default function StandaloneTypingRunner({ lesson, targetText, mode = "practice", duration = 0, onExit }) {
-  const showLiveWpm = useAuthStore((store) => store.schoolSettings.showLiveWpm);
   const showVirtualKeyboard = useAuthStore((store) => store.user?.preferences?.virtualKeyboard !== false);
   const inputRef = useRef(null);
   const submittedRef = useRef(false);
@@ -63,16 +63,27 @@ export default function StandaloneTypingRunner({ lesson, targetText, mode = "pra
     inputRef.current?.focus();
   }
 
+  const progress = engine.targetSegments.length ? (engine.currentIndex / engine.targetSegments.length) * 100 : 0;
+
   return (
-    <div className="relative">
+    <div className="relative mx-auto max-w-[1380px] space-y-4">
       <textarea {...engine.inputHandlers} aria-label="Typing input" autoCapitalize="none" autoComplete="off" className="snp-typing-input-proxy" ref={inputRef} spellCheck="false" value={engine.rawInput} />
-      <div className="grid grid-cols-4 gap-3">
-        {[[duration ? "Remaining" : "Time", clock(duration ? remaining : engine.elapsedTime)], [lesson.language === "km" ? "CPM" : "WPM", showLiveWpm ? Math.round(lesson.language === "km" ? engine.cpm : engine.wpm) : "Hidden"], ["Accuracy", `${Math.round(engine.accuracy)}%`], ["Errors", engine.errors]].map(([label, value]) => <div className="snp-card p-4 text-center" key={label}><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-xl font-black">{value}</p></div>)}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><button className="inline-flex items-center gap-2 text-sm font-black text-primary-700 hover:underline" onClick={onExit} type="button"><LuArrowLeft />Exit activity</button><p className="mt-4 text-xs font-black uppercase tracking-[0.15em] text-emerald-700">{mode === "test" ? "Timed typing test" : "Practice mission"}</p><h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{lesson.title}</h1><p className="mt-1 text-sm font-semibold text-slate-500">{lesson.language === "km" ? "ក្ដារចុចខ្មែរ NIDA · Khmer grapheme scoring" : "English QWERTY · Standard WPM scoring"}</p></div>
+        {duration > 0 && engine.startedAt && <button className="snp-button-primary min-h-10 px-4 py-2 text-sm" onClick={save} type="button">Finish now</button>}
+      </header>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          [duration ? "Remaining" : "Time", clock(duration ? remaining : engine.elapsedTime), LuClock3, "bg-sky-100 text-sky-700"],
+          [lesson.language === "km" ? "CPM" : "WPM", Math.round(lesson.language === "km" ? engine.cpm : engine.wpm), LuGauge, "bg-violet-100 text-violet-700"],
+          ["Accuracy", `${Math.round(engine.accuracy)}%`, LuTarget, "bg-emerald-100 text-emerald-700"],
+          ["Errors", engine.errors, LuKeyboard, "bg-rose-100 text-rose-700"],
+        ].map(([label, value, Icon, tone]) => <div className="snp-card flex items-center gap-3 p-3 sm:p-4" key={label}><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-900 shadow-[0_2px_0_0_#334155] ${tone}`}><Icon /></span><div className="min-w-0"><p className="truncate text-[9px] font-black uppercase tracking-wider text-slate-400 sm:text-[10px]">{label}</p><p className="mt-0.5 truncate text-xl font-black">{value}</p></div></div>)}
       </div>
-      <div className="mt-4"><TypingAdventureHud engine={engine} language={lesson.language} /></div>
-      <button className="snp-card mt-4 block min-h-72 w-full cursor-text p-8 text-left" onClick={() => inputRef.current?.focus()} type="button"><TypingText currentIndex={engine.currentIndex} hasCurrentError={engine.hasCurrentError} language={lesson.language} targetSegments={engine.targetSegments} /><p className="mt-8 text-sm font-bold text-slate-400">Click the card and begin typing.</p></button>
-      {showVirtualKeyboard && <div className="mt-4"><VirtualKeyboard hasError={engine.hasCurrentError} language={lesson.language} nextText={engine.remainingText} onKeyPress={typeVirtualKey} /></div>}
-      <div className="mt-4 flex gap-3"><button className="snp-button-secondary" onClick={onExit} type="button">Exit</button>{duration > 0 && engine.startedAt && <button className="snp-button-primary" onClick={save} type="button">Finish Now</button>}</div>
+      <TypingAdventureHud engine={engine} language={lesson.language} />
+      <button className="snp-card block min-h-72 w-full cursor-text overflow-hidden p-0 text-left" onClick={() => inputRef.current?.focus()} type="button"><div className="flex items-center justify-between gap-3 border-b-2 border-slate-900 bg-slate-50 px-5 py-3"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Typing area</p><p className="text-xs font-black text-primary-700">{Math.round(progress)}% complete</p></div><div className="h-2 bg-slate-100"><div className="h-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} /></div><div className="p-6 sm:p-8"><TypingText currentIndex={engine.currentIndex} hasCurrentError={engine.hasCurrentError} language={lesson.language} targetSegments={engine.targetSegments} /><p className="mt-8 text-sm font-bold text-slate-400">Click this card, then begin typing. The timer starts on your first key.</p></div></button>
+      {showVirtualKeyboard && <VirtualKeyboard hasError={engine.hasCurrentError} language={lesson.language} nextText={engine.remainingText} onKeyPress={typeVirtualKey} />}
       <LessonResultModal result={resultState.result} saving={resultState.saving} saveError={resultState.error} onRetrySave={save} onTryAgain={reset} onBack={onExit} onNext={() => {}} hasNext={false} />
     </div>
   );

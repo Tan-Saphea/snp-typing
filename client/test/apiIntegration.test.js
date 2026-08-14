@@ -32,6 +32,6 @@ test.skipIf(!integrationEnabled)(
     const response = await api.get("/auth/me");
 
     expect(response.data.data.user.id).toBe(session.user.id);
-    expect(response.data.data.user.role).toBe("student");
+    expect(response.data.data.user.username).toBe(session.user.username);
   },
 );

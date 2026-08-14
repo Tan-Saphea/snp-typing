@@ -1,3 +1,3 @@
 "use client";
 
-export { default } from "@/components/RoleHome.jsx";
+export { default } from "@/screens/DashboardPage.jsx";

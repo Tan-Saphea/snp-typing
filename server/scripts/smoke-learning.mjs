@@ -1,7 +1,6 @@
 import { buildLessonTargetText, segmentGraphemes } from "@snp/shared";
 
 const apiUrl = process.env.SNP_SMOKE_API_URL ?? "http://127.0.0.1:5012/api";
-const username = process.env.SNP_SMOKE_USERNAME ?? "dara";
 const password = process.env.SNP_SMOKE_PASSWORD;
 
 if (!password) throw new Error("SNP_SMOKE_PASSWORD is required.");
@@ -49,11 +48,12 @@ function perfectResult(lesson) {
   };
 }
 
-const login = await request("/auth/login", {
+const username = `smoke-${Date.now().toString(36)}`;
+const registration = await request("/auth/register", {
   method: "POST",
-  body: JSON.stringify({ username, password }),
-});
-const authorization = { Authorization: `Bearer ${login.data.accessToken}` };
+  body: JSON.stringify({ firstName: "Smoke", lastName: "Learner", username, password }),
+}, 201);
+const authorization = { Authorization: `Bearer ${registration.data.accessToken}` };
 const english = await request("/lessons?language=en", { headers: authorization });
 const englishBasics = english.data.lessons.filter(
   (lesson) => lesson.category === "keyboard-basics",
@@ -61,26 +61,18 @@ const englishBasics = english.data.lessons.filter(
 
 if (english.data.lessons.length !== 118) throw new Error(`Visible English lesson count is incorrect: ${english.data.lessons.length}.`);
 if (englishBasics[0].isLocked || !englishBasics[1].isLocked) {
-  throw new Error("English prerequisite state is incorrect before completion.");
+  throw new Error("The first English lesson should be open and the second should be locked.");
 }
 
-const lockedEnglish = await request(`/lessons/${englishBasics[1].id}`, { headers: authorization }, 403);
-if (lockedEnglish.error?.code !== "LESSON_LOCKED") {
-  throw new Error("Locked lesson access did not return the expected API error.");
-}
+const lockedLesson = await request(`/lessons/${englishBasics[1].id}`, { headers: authorization }, 403);
+if (lockedLesson.error?.code !== "LESSON_LOCKED") throw new Error("A locked lesson URL did not return LESSON_LOCKED.");
 
-const lockedLessonPayload = {
-  ...perfectResult(englishBasics[1]),
-  lessonId: englishBasics[1].id,
-};
 const lockedResult = await request("/results", {
   method: "POST",
   headers: authorization,
-  body: JSON.stringify(lockedLessonPayload),
+  body: JSON.stringify(perfectResult(englishBasics[1])),
 }, 403);
-if (lockedResult.error?.code !== "LESSON_LOCKED") {
-  throw new Error("The result API accepted a locked lesson attempt.");
-}
+if (lockedResult.error?.code !== "LESSON_LOCKED") throw new Error("A locked result submission did not return LESSON_LOCKED.");
 
 const firstEnglish = englishBasics[0];
 const englishLesson = await request(`/lessons/${firstEnglish.id}`, { headers: authorization });
@@ -94,11 +86,14 @@ if (!savedEnglish.data.result.passed || savedEnglish.data.result.stars !== 3) {
   throw new Error("A perfect English result did not pass with three stars.");
 }
 
+await request(`/lessons/${englishBasics[1].id}`, { headers: authorization });
+
 const englishAfter = await request("/lessons?language=en&level=1", { headers: authorization });
 const basicsAfter = englishAfter.data.lessons.filter(
   (lesson) => lesson.category === "keyboard-basics",
 );
-if (basicsAfter[1].isLocked) throw new Error("English completion did not unlock the next lesson.");
+if (basicsAfter.length !== englishBasics.length) throw new Error("A saved result changed the visible lesson set.");
+if (basicsAfter[1].isLocked) throw new Error("Passing the prerequisite did not unlock the next English lesson.");
 
 const khmer = await request("/lessons?language=km", { headers: authorization });
 if (khmer.data.lessons.length !== 68) throw new Error(`Visible Khmer lesson count is incorrect: ${khmer.data.lessons.length}.`);
@@ -126,4 +121,4 @@ if (
   throw new Error("Saved results did not update progress summaries.");
 }
 
-console.log("Phase 2 lesson, result, unlock, Khmer grapheme, and progress smoke tests passed.");
+console.log("Self-registration, sequential lesson protection, results, Khmer scoring, and progress smoke tests passed.");

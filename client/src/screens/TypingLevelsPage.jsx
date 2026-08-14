@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LuArrowRight, LuBookOpen, LuGraduationCap, LuLanguages, LuLockKeyhole, LuStar } from "react-icons/lu";
-import { Link } from "../components/NextRouter.jsx";
+import { LuBookOpen, LuGraduationCap, LuLanguages, LuLockKeyhole, LuStar } from "react-icons/lu";
 
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
+import LearningCategoryCard, { learningCardPalette, learningCardPatterns } from "../components/LearningCategoryCard.jsx";
+import PageHero from "../components/PageHero.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import { curriculumLevels, isCurriculumLesson, languageLabel } from "../data/curriculum.js";
 import { getApiErrorMessage } from "../services/api.js";
@@ -20,23 +21,52 @@ export default function TypingLevelsPage({ language }) {
   const summaries = useMemo(() => curriculumLevels[language].map((level) => {
     const lessons = state.lessons.filter((lesson) => lesson.level === level.level && isCurriculumLesson(lesson));
     const completed = lessons.filter((lesson) => lesson.progress.passed).length;
-    return { ...level, lessons, completed, percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0, stars: lessons.reduce((sum, lesson) => sum + lesson.progress.bestStars, 0), locked: lessons.length === 0 || lessons.every((lesson) => lesson.isLocked) };
+    const lockedLesson = lessons.find((lesson) => lesson.isLocked);
+    return { ...level, lessons, completed, percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0, stars: lessons.reduce((sum, lesson) => sum + lesson.progress.bestStars, 0), isLocked: Boolean(lessons.length && lessons.every((lesson) => lesson.isLocked)), unlockRequirement: lockedLesson?.unlockRequirement };
   }), [language, state.lessons]);
 
   if (state.loading) return <PageLoader />;
   if (state.error) return <PageError message={state.error} onRetry={load} />;
 
   const basePath = language === "km" ? "khmer" : "english";
+  const totalLessons = summaries.reduce((sum, level) => sum + level.lessons.length, 0);
+  const totalCompleted = summaries.reduce((sum, level) => sum + level.completed, 0);
   return (
     <div>
-      <section className={`snp-panel-shell relative overflow-hidden rounded-xl p-6 text-white sm:p-8 ${language === "km" ? "bg-gradient-to-r from-violet-700 to-indigo-600" : "bg-gradient-to-r from-primary-700 to-sky-500"}`}><div className="absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/10 blur-xl" /><div className="relative flex items-center gap-5"><span className="hidden h-16 w-16 shrink-0 place-items-center rounded-xl border-2 border-white/20 bg-white/10 text-white shadow-[0_2px_0_0_rgba(255,255,255,0.1)] sm:grid">{language === "km" ? <LuLanguages size={30} /> : <LuGraduationCap size={30} />}</span><div><p className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/75 sm:text-sm">Learning Path</p><h1 className="mt-2 text-2xl font-black sm:text-3xl">{languageLabel(language)}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">Complete lessons in order, build accuracy, and earn three stars on every activity.</p></div></div></section>
-      <div className="mt-5 grid gap-4 xl:grid-cols-2">{summaries.map((level) => (
-        <article className={`snp-card group p-5 transition sm:p-6 ${level.locked ? "opacity-75" : ""}`} key={level.level}>
-          <div className="flex gap-4 sm:gap-5"><div className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl border-2 border-slate-800 text-lg font-black shadow-[0_2px_0_0_#334155] sm:h-16 sm:w-16 ${level.locked ? "bg-slate-100 text-slate-500" : language === "km" ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700"}`}>{level.locked ? <LuLockKeyhole size={22} /> : level.icon}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Level {level.level}</p><h2 className="mt-1 truncate text-lg font-black text-ink sm:text-xl">{level.title}</h2></div><span className="inline-flex shrink-0 items-center gap-1 text-sm font-black text-amber-600"><LuStar fill="currentColor" />{level.stars}</span></div><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-6 text-slate-600">{level.description}</p></div></div>
-          <div className="mt-5"><ProgressBar value={level.percent} /></div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><p className="inline-flex items-center gap-2 text-sm font-bold text-slate-500"><LuBookOpen />{level.lessons.length ? `${level.completed}/${level.lessons.length} lessons` : "Curriculum in preparation"}</p>{level.locked ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-350 bg-slate-100 px-4 py-2 text-sm font-black text-slate-500"><LuLockKeyhole />Locked</span> : <Link className="snp-button-primary inline-flex items-center gap-2 px-4 py-2 text-sm" to={`/${basePath}/level/${level.level}`}>View lessons <LuArrowRight /></Link>}</div>
-        </article>
-      ))}</div>
+      <PageHero
+        badges={[
+          { icon: LuBookOpen, label: `${totalCompleted}/${totalLessons} lessons complete` },
+          { icon: LuStar, label: "Three stars per lesson" },
+        ]}
+        description={language === "km" ? "រៀនតាមលំដាប់។ ប្រឡងជាប់មេរៀននីមួយៗ ដើម្បីដោះសោមេរៀនបន្ទាប់ និងប្រមូលផ្កាយ។" : "Follow the path in order. Pass each lesson to unlock the next one and earn stars as your rhythm improves."}
+        eyebrow="Learning path"
+        icon={language === "km" ? LuLanguages : LuGraduationCap}
+        title={languageLabel(language)}
+        tone={language === "km" ? "violet" : "sky"}
+      />
+      <div className="snp-learning-grid mt-6">{summaries.map((level, index) => {
+        const color = learningCardPalette[index % learningCardPalette.length];
+        return (
+          <LearningCategoryCard
+            accent={color.accent}
+            actionLabel="Open level"
+            badge={level.isLocked ? "Locked" : `0${level.level}`}
+            className={level.isLocked ? "snp-learning-card-locked" : ""}
+            deep={color.deep}
+            description={level.description}
+            footer={level.isLocked ? <div className="snp-learning-card-locked-footer"><LuLockKeyhole /><span>Pass {level.unlockRequirement?.title || "the previous level"} first</span></div> : undefined}
+            href={level.lessons.length && !level.isLocked ? `/${basePath}/level/${level.level}` : undefined}
+            key={level.level}
+            pattern={learningCardPatterns[index % learningCardPatterns.length]}
+            subtitle={language === "km" ? `កម្រិតទី ${level.level}` : `Typing level ${level.level}`}
+            title={level.title}
+            visual={level.isLocked ? <LuLockKeyhole /> : <span>{level.icon}</span>}
+          >
+            <div className="snp-learning-card-progress"><ProgressBar color="bg-slate-900" value={level.percent} /></div>
+            <div className="snp-learning-card-meta"><span><LuBookOpen />{level.completed}/{level.lessons.length} lessons</span><span><LuStar fill="currentColor" />{level.stars} stars</span></div>
+          </LearningCategoryCard>
+        );
+      })}</div>
     </div>
   );
 }

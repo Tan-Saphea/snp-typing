@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
+import { env } from "../config/env.js";
 import { RefreshToken } from "../models/RefreshToken.js";
 import { User } from "../models/User.js";
 import ApiError from "../utils/ApiError.js";
@@ -59,12 +61,44 @@ export async function login({ username, password }, requestContext) {
     throw new ApiError(
       403,
       "ACCOUNT_INACTIVE",
-      "This account is not active. Ask an administrator for help.",
+      "This account is not active. Contact support for help.",
     );
   }
 
   user.lastLoginAt = new Date();
   await user.save();
+
+  return createSession(user, requestContext);
+}
+
+export async function register(data, requestContext) {
+  const username = data.username.toLowerCase();
+  const existingUser = await User.exists({ username });
+
+  if (existingUser) {
+    throw new ApiError(409, "USERNAME_TAKEN", "That username is already in use. Choose another one.");
+  }
+
+  const passwordHash = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
+  let user;
+
+  try {
+    user = await User.create({
+      username,
+      passwordHash,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      khmerName: data.khmerName,
+      gender: data.gender,
+      status: "active",
+      lastLoginAt: new Date(),
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new ApiError(409, "USERNAME_TAKEN", "That username is already in use. Choose another one.");
+    }
+    throw error;
+  }
 
   return createSession(user, requestContext);
 }

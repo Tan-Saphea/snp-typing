@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "SNP Typing educational desktop application",
+  "author": "Tan Saphea",
+  "homepage": "https://github.com/Tan-Saphea/snp-typing",
   "main": "electron/main.cjs",
   "workspaces": [
     "client",
@@ -19,6 +21,7 @@
     "lint": "npm run lint -w @snp/server && npm run lint -w @snp/client",
     "seed": "npm run seed -w @snp/server",
     "dist": "npm run build -w @snp/client && electron-builder --config electron-builder.yml --win --x64",
+    "dist:win": "npm run dist",
     "make": "npm run dist"
   },
   "devDependencies": {

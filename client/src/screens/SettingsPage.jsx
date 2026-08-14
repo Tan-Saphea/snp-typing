@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { LuCircleCheckBig, LuGamepad2, LuGauge, LuHand, LuKeyboard, LuLogOut, LuMoon, LuSave, LuSchool, LuType, LuUser, LuVolume2 } from "react-icons/lu";
+import { LuCircleCheckBig, LuHand, LuKeyboard, LuLogOut, LuMoon, LuSave, LuSettings, LuSparkles, LuType, LuVolume2 } from "react-icons/lu";
 import { useNavigate } from "../components/NextRouter.jsx";
 
 import { previewKeyboardSound } from "../features/typing/keyboardSound.js";
+import PageHero from "../components/PageHero.jsx";
 import { getApiErrorMessage } from "../services/api.js";
-import { savePreferences, saveSchoolSettings } from "../services/settingsService.js";
+import { savePreferences } from "../services/settingsService.js";
 import { useAuthStore } from "../stores/authStore.js";
 
-const storageKey = "snp-student-settings";
+const storageKey = "snp-learner-settings";
 const defaults = {
   sound: true,
   soundStyle: "soft",
@@ -37,8 +38,6 @@ export default function SettingsPage() {
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-  const schoolSettings = useAuthStore((state) => state.schoolSettings);
-  const setSchoolSettings = useAuthStore((state) => state.setSchoolSettings);
   const local = loadSettings();
   const [settings, setSettings] = useState({
     ...local,
@@ -50,16 +49,13 @@ export default function SettingsPage() {
     largeText: user?.preferences?.fontSize ? user.preferences.fontSize === "large" : local.largeText,
     theme: user?.preferences?.theme ?? local.theme,
   });
-  const [schoolForm, setSchoolForm] = useState(schoolSettings);
-  const [status, setStatus] = useState({ saving: false, personalSaved: false, schoolSaved: false, error: "" });
-  const isStaff = user?.role === "admin" || user?.role === "teacher";
+  const [status, setStatus] = useState({ saving: false, saved: false, error: "" });
 
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
   }
 
-  useEffect(() => { setSchoolForm(schoolSettings); }, [schoolSettings]);
   useEffect(() => {
     document.documentElement.classList.toggle("snp-large-text", settings.largeText);
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -71,7 +67,7 @@ export default function SettingsPage() {
   }
 
   async function savePersonal() {
-    setStatus({ saving: true, personalSaved: false, schoolSaved: false, error: "" });
+    setStatus({ saving: true, saved: false, error: "" });
     try {
       const updatedUser = await savePreferences({
         soundEnabled: settings.sound,
@@ -84,40 +80,32 @@ export default function SettingsPage() {
       });
       window.localStorage.setItem(storageKey, JSON.stringify(settings));
       setUser(updatedUser);
-      setStatus({ saving: false, personalSaved: true, schoolSaved: false, error: "" });
+      setStatus({ saving: false, saved: true, error: "" });
     } catch (error) {
-      setStatus({ saving: false, personalSaved: false, schoolSaved: false, error: getApiErrorMessage(error) });
-    }
-  }
-
-  async function saveSchool(event) {
-    event.preventDefault();
-    setStatus({ saving: true, personalSaved: false, schoolSaved: false, error: "" });
-    try {
-      const updated = await saveSchoolSettings({
-        minimumPassingAccuracy: Number(schoolForm.minimumPassingAccuracy),
-        showLiveWpm: schoolForm.showLiveWpm,
-        allowTypingGames: schoolForm.allowTypingGames,
-        lessonUnlocking: schoolForm.lessonUnlocking,
-        leaderboardVisibility: schoolForm.leaderboardVisibility,
-      });
-      setSchoolSettings(updated);
-      setStatus({ saving: false, personalSaved: false, schoolSaved: true, error: "" });
-    } catch (error) {
-      setStatus({ saving: false, personalSaved: false, schoolSaved: false, error: getApiErrorMessage(error) });
+      setStatus({ saving: false, saved: false, error: getApiErrorMessage(error) });
     }
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div><p className="snp-kicker">Learning Preferences</p><h1 className="snp-page-heading mt-2">Settings</h1><p className="mt-2 text-sm leading-6 text-slate-655 sm:text-base">Personalize sound, keyboard guidance, readability, and school learning rules.</p></div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHero
+        badges={[
+          { icon: LuKeyboard, label: "Keyboard guidance" },
+          { icon: LuSparkles, label: "Accessible learning" },
+        ]}
+        description="Personalize typing feedback, on-screen guidance, readability, and the app theme. Your choices follow your learner account."
+        eyebrow="Learning preferences"
+        icon={LuSettings}
+        title="Make SNP Typing yours"
+        tone="emerald"
+      />
       
       {/* Profile & Account Banner */}
-      <section className="snp-card overflow-hidden mt-6 bg-[#ecfdf5] border-3 border-slate-800 shadow-[0_6px_0_0_#334155] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-5">
+      <section className="snp-card overflow-hidden bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 flex flex-col gap-5">
         <div className="flex items-center gap-4 text-left">
           <div className={`grid h-16 w-16 place-items-center rounded-xl border-2 border-slate-800 text-2xl font-black shadow-[0_3px_0_0_#334155] ${
-            user?.gender === "male" ? "bg-sky-100 text-sky-850" :
-            user?.gender === "female" ? "bg-rose-100 text-rose-850" :
+            user?.gender === "male" ? "bg-sky-100 text-sky-800" :
+            user?.gender === "female" ? "bg-rose-100 text-rose-800" :
             "bg-white text-slate-800"
           }`}>
             {user?.firstName?.slice(0, 1)?.toUpperCase() || "S"}
@@ -137,7 +125,7 @@ export default function SettingsPage() {
               )}
             </div>
             <p className="mt-1 text-sm font-semibold capitalize text-slate-500">
-              {user?.role} Account · ID: {user?.studentId || "No ID"}
+              Learner Account · ID: {user?.studentId || "Personal"}
             </p>
             {user?.khmerName && (
               <p className="mt-0.5 text-xs font-semibold text-slate-400">
@@ -155,7 +143,7 @@ export default function SettingsPage() {
         </button>
       </section>
 
-      <section className="snp-card mt-6 divide-y divide-slate-100">
+      <section className="snp-card divide-y divide-slate-100 overflow-hidden">
         <ToggleRow checked={settings.sound} description="Play gentle key feedback during typing lessons and tests." icon={LuVolume2} label="Typing sounds" onChange={(value) => setSettings((current) => ({ ...current, sound: value }))} />
         <div className="grid gap-5 p-6 sm:grid-cols-[1fr_180px] sm:items-center">
           <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><LuVolume2 /></span><div><h2 className="font-black text-ink">Sound style</h2><p className="mt-1 text-sm text-slate-500">Choose a soft keyboard, classic typewriter, or playful bubble sound.</p></div></div>
@@ -167,9 +155,8 @@ export default function SettingsPage() {
         <ToggleRow checked={settings.largeText} description="Increase text size throughout the application." icon={LuType} label="Large text" onChange={(value) => setSettings((current) => ({ ...current, largeText: value }))} />
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><LuMoon /></span><div><h2 className="font-black text-ink">Theme</h2><p className="mt-1 text-sm text-slate-500">Choose a light theme or follow the computer setting.</p></div></div><select className="snp-input sm:max-w-44" onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value }))} value={settings.theme}><option value="light">Light</option><option value="system">System</option><option value="dark">Dark</option></select></div>
       </section>
-      <div className="mt-5 flex flex-wrap items-center gap-4"><button className="snp-button-primary" disabled={status.saving} onClick={savePersonal} type="button"><LuSave />{status.saving ? "Saving…" : "Save My Settings"}</button>{status.personalSaved && <p className="inline-flex items-center gap-2 font-bold text-emerald-700"><LuCircleCheckBig />Settings saved.</p>}</div>
-      {isStaff && <form className="snp-card mt-8 overflow-hidden" onSubmit={saveSchool}><div className="flex items-center gap-3 border-b border-slate-100 p-6"><span className="grid h-11 w-11 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><LuSchool /></span><div><p className="text-xs font-extrabold uppercase tracking-wider text-primary-600">Teacher Controls</p><h2 className="mt-1 text-2xl font-black">School Learning Rules</h2></div></div><label className="block p-6 font-black">Minimum passing accuracy<input className="snp-input mt-2 max-w-40" min="0" max="100" onChange={(event) => setSchoolForm((current) => ({ ...current, minimumPassingAccuracy: event.target.value }))} type="number" value={schoolForm.minimumPassingAccuracy} /></label><div className="divide-y divide-slate-100"><ToggleRow checked={schoolForm.showLiveWpm} description="Show changing speed during lessons and tests." icon={LuGauge} label="Show live WPM/CPM" onChange={(value) => setSchoolForm((current) => ({ ...current, showLiveWpm: value }))} /><ToggleRow checked={schoolForm.allowTypingGames} description="Allow students to open and save typing games." icon={LuGamepad2} label="Allow typing games" onChange={(value) => setSchoolForm((current) => ({ ...current, allowTypingGames: value }))} /><ToggleRow checked={schoolForm.lessonUnlocking} description="Require students to pass each lesson in order." icon={LuSchool} label="Progressive lesson unlocking" onChange={(value) => setSchoolForm((current) => ({ ...current, lessonUnlocking: value }))} /></div><label className="block border-t border-slate-100 p-6 font-black">Leaderboard visibility<select className="snp-input mt-2" onChange={(event) => setSchoolForm((current) => ({ ...current, leaderboardVisibility: event.target.value }))} value={schoolForm.leaderboardVisibility}><option value="school">Whole school</option><option value="class">Class only</option><option value="hidden">Hidden from students</option></select></label><div className="flex flex-wrap items-center gap-4 border-t border-slate-100 p-6"><button className="snp-button-primary" disabled={status.saving} type="submit"><LuSave />Save School Rules</button>{status.schoolSaved && <p className="inline-flex items-center gap-2 font-bold text-emerald-700"><LuCircleCheckBig />School rules saved.</p>}</div></form>}
-      {status.error && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 font-bold text-red-700">{status.error}</p>}
+      <div className="flex flex-wrap items-center gap-4"><button className="snp-button-primary" disabled={status.saving} onClick={savePersonal} type="button"><LuSave />{status.saving ? "Saving…" : "Save my settings"}</button>{status.saved && <p className="inline-flex items-center gap-2 font-bold text-emerald-700"><LuCircleCheckBig />Settings saved.</p>}</div>
+      {status.error && <p className="rounded-xl border-2 border-red-300 bg-red-50 p-4 font-bold text-red-700 shadow-[0_3px_0_0_#fca5a5]">{status.error}</p>}
     </div>
   );
 }

@@ -2,16 +2,12 @@ import bcrypt from "bcrypt";
 
 import { connectDatabase, disconnectDatabase } from "../config/database.js";
 import { env } from "../config/env.js";
-import { Class } from "../models/Class.js";
 import { Lesson } from "../models/Lesson.js";
 import { User } from "../models/User.js";
-import { SchoolSetting } from "../models/SchoolSetting.js";
 import { retiredLessonSlugs, seedLessons } from "./lessonData.js";
 
 function requireSeedPasswords() {
   const missing = [
-    "SEED_ADMIN_PASSWORD",
-    "SEED_TEACHER_PASSWORD",
     "SEED_STUDENT_PASSWORD",
   ].filter((key) => !env[key]);
 
@@ -30,28 +26,7 @@ async function upsertUser(data, password) {
   );
 }
 
-async function seedUsersAndClass() {
-  const admin = await upsertUser(
-    {
-      username: "admin",
-      firstName: "System",
-      lastName: "Administrator",
-      role: "admin",
-      status: "active",
-    },
-    env.SEED_ADMIN_PASSWORD,
-  );
-  const teacher = await upsertUser(
-    {
-      username: "teacher",
-      firstName: "Teacher",
-      lastName: "A",
-      role: "teacher",
-      status: "active",
-    },
-    env.SEED_TEACHER_PASSWORD,
-  );
-
+async function seedLearners() {
   const studentRecords = [
     {
       username: "dara",
@@ -83,37 +58,16 @@ async function seedUsersAndClass() {
   for (const student of studentRecords) {
     students.push(
       await upsertUser(
-        { ...student, role: "student", status: "active" },
+        { ...student, status: "active" },
         env.SEED_STUDENT_PASSWORD,
       ),
     );
   }
 
-  const schoolClass = await Class.findOneAndUpdate(
-    {
-      teacher: teacher.id,
-      name: "Computer Level 1",
-      academicYear: "2026-2027",
-    },
-    {
-      $set: {
-        level: "Level 1",
-        students: students.map((student) => student.id),
-        status: "active",
-      },
-    },
-    { new: true, runValidators: true, upsert: true, setDefaultsOnInsert: true },
-  );
-
-  await User.updateMany(
-    { _id: { $in: students.map((student) => student.id) } },
-    { $set: { class: schoolClass.id } },
-  );
-
-  return { admin, teacher, students };
+  return students;
 }
 
-async function seedLessonRecords(admin) {
+async function seedLessonRecords(actor) {
   const previousLessonByTrack = new Map();
   const lessonBySlug = new Map();
   const currentSlugs = new Set(seedLessons.map((item) => item.slug));
@@ -124,7 +78,7 @@ async function seedLessonRecords(admin) {
     retired.isActive = false;
     retired.isPublished = false;
     retired.category = `retired-${retired.slug}`;
-    retired.updatedBy = admin.id;
+    retired.updatedBy = actor.id;
     await retired.save();
   }
 
@@ -142,8 +96,8 @@ async function seedLessonRecords(admin) {
         $set: {
           ...lessonFields,
           prerequisiteLesson: explicitPrerequisite?.id ?? previousLesson?.id ?? null,
-          createdBy: admin.id,
-          updatedBy: admin.id,
+          createdBy: actor.id,
+          updatedBy: actor.id,
         },
       },
       { new: true, runValidators: true, upsert: true, setDefaultsOnInsert: true },
@@ -157,11 +111,10 @@ async function seedLessonRecords(admin) {
 async function run() {
   requireSeedPasswords();
   await connectDatabase();
-  const { admin } = await seedUsersAndClass();
-  await SchoolSetting.findOneAndUpdate({ key: "default" }, { $setOnInsert: { key: "default", updatedBy: admin.id } }, { upsert: true, setDefaultsOnInsert: true });
-  await seedLessonRecords(admin);
+  const learners = await seedLearners();
+  await seedLessonRecords(learners[0]);
   console.log(
-    `Seed complete: 5 users, 1 class, and ${seedLessons.length} lessons/tests.`,
+    `Seed complete: ${learners.length} learners and ${seedLessons.length} lessons/tests.`,
   );
 }
 

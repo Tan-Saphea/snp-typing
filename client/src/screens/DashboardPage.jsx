@@ -1,20 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   LuArrowRight,
+  LuChartBar,
   LuCalendarDays,
   LuClock3,
+  LuDumbbell,
+  LuGamepad2,
   LuGauge,
   LuKeyboard,
   LuLanguages,
-  LuPlay,
+  LuMonitor,
   LuSparkles,
   LuTarget,
+  LuTimer,
   LuTrophy,
   LuTrendingUp,
 } from "react-icons/lu";
 import { Link } from "../components/NextRouter.jsx";
 
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
+import LearningCategoryCard, { learningCardPalette, learningCardPatterns } from "../components/LearningCategoryCard.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import Stars from "../components/Stars.jsx";
 import { curriculumLevels } from "../data/curriculum.js";
@@ -53,38 +58,48 @@ function LearningCard({ language, summary }) {
   const Icon = isKhmer ? LuLanguages : LuKeyboard;
 
   return (
-    <article className={`group rounded-2xl border-2 p-5 transition-all duration-150 hover:-translate-y-0.5 ${
-      isKhmer 
-        ? "border-violet-900 bg-violet-50 text-violet-900 shadow-[0_5px_0_0_#c4b5fd]" 
-        : "border-sky-900 bg-sky-50 text-sky-900 shadow-[0_5px_0_0_#7dd3fc]"
-    }`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-extrabold opacity-75">{isKhmer ? "Khmer Typing" : "English Typing"}</p>
-          <h3 className="mt-1 line-clamp-2 text-lg font-black sm:text-xl">Level {levelNumber} — {level?.title}</h3>
-        </div>
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border-2 border-slate-900 shadow-[0_3px_0_0_rgba(15,23,42,0.25)] ${
-          isKhmer ? "bg-violet-600 text-white" : "bg-sky-600 text-white"
-        }`}>
-          <Icon aria-hidden="true" size={21} />
-        </span>
-      </div>
-      <div className="mt-5">
-        <ProgressBar color={isKhmer ? "bg-violet-600" : "bg-sky-600"} value={summary.percent} />
-      </div>
-      <Link 
-        className={`mt-5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 px-4 py-2 text-sm font-black text-white transition-all duration-100 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none ${
-          isKhmer 
-            ? "border-violet-800 bg-violet-600 shadow-[0_3px_0_0_#5b21b6]" 
-            : "border-sky-800 bg-sky-600 shadow-[0_3px_0_0_#0369a1]"
-        }`}
-        to={summary.continueLesson ? `/lessons/${summary.continueLesson.id}` : `/${isKhmer ? "khmer" : "english"}`}
-      >
-        <LuPlay fill="currentColor" size={16} />
-        {summary.continueLesson ? "Continue lesson" : "View lessons"}
-        <LuArrowRight className="ml-auto" />
-      </Link>
-    </article>
+    <LearningCategoryCard
+      accent={isKhmer ? "#a94cf4" : "#3f86f7"}
+      actionLabel={summary.continueLesson ? "Continue lesson" : "View lessons"}
+      badge={isKhmer ? "ខ្មែរ" : "EN"}
+      deep={isKhmer ? "#7230b2" : "#1d5fc5"}
+      description={summary.continueLesson ? `Continue “${summary.continueLesson.title}” and build a steady rhythm.` : level?.description}
+      href={summary.continueLesson ? `/lessons/${summary.continueLesson.id}` : `/${isKhmer ? "khmer" : "english"}`}
+      pattern={isKhmer ? "checker" : "stripes"}
+      subtitle={`Level ${levelNumber} · ${level?.title}`}
+      title={isKhmer ? "Khmer Typing" : "English Typing"}
+      visual={<Icon />}
+    >
+      <div className="snp-learning-card-progress"><ProgressBar color="bg-slate-900" value={summary.percent} /></div>
+    </LearningCategoryCard>
+  );
+}
+
+const exploreAreas = [
+  { title: "Practice", subtitle: "ហាត់វាយអក្សរ", description: "Warm up with words, sentences, paragraphs, or your own text.", href: "/practice", icon: LuDumbbell },
+  { title: "Typing Test", subtitle: "តេស្តវាយអក្សរ", description: "Measure your speed and accuracy in focused timed sessions.", href: "/typing-test", icon: LuTimer },
+  { title: "Typing Games", subtitle: "ល្បែងវាយអក្សរ", description: "Turn accurate English and Khmer typing into points and streaks.", href: "/games", icon: LuGamepad2 },
+  { title: "Computer Skills", subtitle: "ជំនាញកុំព្យូទ័រ", description: "Practice typing, editing, and Microsoft Word formatting tools.", href: "/computer-skills", icon: LuMonitor },
+  { title: "My Progress", subtitle: "វឌ្ឍនភាពរបស់ខ្ញុំ", description: "Review your speed, accuracy, stars, streak, and recent activity.", href: "/progress", icon: LuChartBar },
+  { title: "Leaderboard", subtitle: "តារាងពិន្ទុ", description: "Celebrate effort, speed, accuracy, and stars with other learners.", href: "/leaderboard", icon: LuTrophy },
+];
+
+function ExploreCard({ area, index }) {
+  const color = learningCardPalette[(index + 2) % learningCardPalette.length];
+  const Icon = area.icon;
+  return (
+    <LearningCategoryCard
+      accent={color.accent}
+      actionLabel="Learn now"
+      badge={String(index + 3).padStart(2, "0")}
+      deep={color.deep}
+      description={area.description}
+      href={area.href}
+      pattern={learningCardPatterns[(index + 2) % learningCardPatterns.length]}
+      subtitle={area.subtitle}
+      title={area.title}
+      visual={<Icon />}
+    />
   );
 }
 
@@ -136,7 +151,6 @@ export default function DashboardPage() {
   if (state.error) return <PageError message={state.error} onRetry={load} />;
 
   const { progress } = state;
-  const challengeLesson = progress.languages.en.continueLesson ?? progress.languages.km.continueLesson;
   const maxMinutes = Math.max(...progress.weekly.map((day) => day.minutes), 1);
 
   return (
@@ -177,51 +191,15 @@ export default function DashboardPage() {
         <StatCard accent="bg-amber-100 text-amber-700" icon={LuTarget} label="Accuracy" note="average" value={`${Math.round(progress.stats.averageAccuracy)}%`} />
       </section>
 
-      {/* Main Track Selection & Today's Challenge */}
-      <section className="grid items-stretch gap-6 xl:grid-cols-[1.45fr_0.75fr]">
-        <div>
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">Continue Learning</p>
-              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">Pick up where you left off</h2>
-            </div>
-            <Link className="inline-flex items-center gap-1 text-sm font-black text-primary-700 hover:underline" to="/english">
-              All levels <LuArrowRight />
-            </Link>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <LearningCard language="en" summary={progress.languages.en} />
-            <LearningCard language="km" summary={progress.languages.km} />
-          </div>
+      <section>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">Learning Library</p><h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Choose what to learn</h2></div>
+          <p className="max-w-md text-sm font-semibold leading-6 text-slate-500">Typing lessons and computer skills unlock step by step. Practice, tests, and games stay open anytime.</p>
         </div>
-        
-        {/* Today's Challenge */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-violet-600 p-6 text-white shadow-[0_6px_0_0_#172033]">
-          <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-fuchsia-300/25 blur-2xl" />
-          <div className="relative">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-violet-100">
-              <LuTarget />Today’s Challenge
-            </span>
-            <h2 className="mt-5 text-2xl font-black sm:text-3xl">Accuracy Challenge</h2>
-            <p className="mt-2 min-h-12 text-sm leading-6 text-violet-100">
-              {challengeLesson ? `Complete “${challengeLesson.title}” with 90% accuracy.` : "Choose your first lesson and begin learning."}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-xl border border-white/20 bg-white/10 px-3 py-2">+30 points</span>
-              <span className="inline-flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2">
-                <LuTrophy />Star reward
-              </span>
-            </div>
-            {challengeLesson ? (
-              <Link className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-white px-5 py-3 font-black text-slate-900 shadow-[0_4px_0_0_#0f172a] transition-all duration-100 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none" to={`/lessons/${challengeLesson.id}`}>
-                <LuPlay fill="currentColor" />Start Challenge
-              </Link>
-            ) : (
-              <Link className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-white px-5 py-3 font-black text-slate-900 shadow-[0_4px_0_0_#0f172a] transition-all duration-100 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none" to="/english">
-                <LuKeyboard />Choose a lesson
-              </Link>
-            )}
-          </div>
+        <div className="snp-learning-grid">
+          <LearningCard language="en" summary={progress.languages.en} />
+          <LearningCard language="km" summary={progress.languages.km} />
+          {exploreAreas.map((area, index) => <ExploreCard area={area} index={index} key={area.href} />)}
         </div>
       </section>
 

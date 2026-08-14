@@ -1,5 +1,6 @@
 import { normalizeForComparison, segmentGraphemes } from "@snp/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LuAlignCenter, LuArrowLeft, LuBold, LuCaseUpper, LuCheck, LuClipboardPaste, LuCopy, LuFileText, LuHighlighter, LuImage, LuItalic, LuList, LuListOrdered, LuPalette, LuRedo2, LuScissors, LuShapes, LuSparkles, LuTextCursorInput, LuTrophy, LuUnderline, LuUndo2 } from "react-icons/lu";
 import { Link, useParams } from "../components/NextRouter.jsx";
 
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
@@ -8,7 +9,14 @@ import { getApiErrorMessage } from "../services/api.js";
 import { getLesson } from "../services/lessonService.js";
 import { saveLessonResult } from "../services/resultService.js";
 
-const tools = ["Copy", "Paste", "Cut", "Undo", "Redo", "Font", "Font Size", "Bold", "Italic", "Underline", "Font Color", "Highlight", "Alignment", "Bullets", "Numbering", "Pictures", "Shapes"];
+const tools = [
+  ["Copy", LuCopy], ["Paste", LuClipboardPaste], ["Cut", LuScissors],
+  ["Undo", LuUndo2], ["Redo", LuRedo2], ["Font", LuCaseUpper],
+  ["Font Size", LuTextCursorInput], ["Bold", LuBold], ["Italic", LuItalic],
+  ["Underline", LuUnderline], ["Font Color", LuPalette], ["Highlight", LuHighlighter],
+  ["Alignment", LuAlignCenter], ["Bullets", LuList], ["Numbering", LuListOrdered],
+  ["Pictures", LuImage], ["Shapes", LuShapes],
+];
 
 export default function ComputerSkillWorkspacePage() {
   const { lessonId } = useParams();
@@ -54,8 +62,10 @@ export default function ComputerSkillWorkspacePage() {
 
   if (result) {
     return (
-      <div className="snp-brutal-card mx-auto max-w-2xl p-8 text-center">
-        <h1 className="text-3xl font-black">Computer Skill Complete</h1>
+      <div className="snp-result-dialog mx-auto max-w-2xl overflow-hidden p-6 text-center sm:p-8">
+        <span className="mx-auto grid h-20 w-20 place-items-center rounded-3xl border-2 border-slate-900 bg-emerald-300 text-4xl text-emerald-950 shadow-[0_5px_0_0_#059669]"><LuTrophy /></span>
+        <p className="mt-6 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Task complete</p>
+        <h1 className="mt-2 text-3xl font-black">Computer Skill Complete</h1>
         <p className="mt-2 text-slate-600">
           Typing and formatting results were saved.
         </p>
@@ -68,7 +78,7 @@ export default function ComputerSkillWorkspacePage() {
             ["Time", 10]
           ].map(([label, value]) => (
             <div
-              className="rounded-xl border-2 border-[#059669] bg-white p-4 shadow-[0_3px_0_0_#059669]"
+              className="rounded-xl border-2 border-slate-900 bg-white p-4 shadow-[0_3px_0_0_#10b981]"
               key={label}
             >
               <p className="text-xs font-black text-slate-400">{label}</p>
@@ -87,7 +97,7 @@ export default function ComputerSkillWorkspacePage() {
           )}/100
         </p>
         
-        <Link className="snp-brutal-button mt-6" to="/computer-skills">
+        <Link className="snp-brutal-button mt-6 px-6" to="/computer-skills">
           Back to Skills
         </Link>
       </div>
@@ -95,18 +105,12 @@ export default function ComputerSkillWorkspacePage() {
   }
 
   return (
-    <div>
-      <Link className="font-black text-[#047857] hover:text-[#065f46]" to="/computer-skills">
-        ← Computer Skills
+    <div className="mx-auto max-w-7xl">
+      <Link className="inline-flex items-center gap-2 text-sm font-black text-primary-700 hover:underline" to="/computer-skills">
+        <LuArrowLeft />Computer Skills
       </Link>
       
-      <div className="mt-3">
-        <p className="text-sm font-extrabold uppercase tracking-wider text-[#047857]">
-          Skill Lesson
-        </p>
-        <h1 className="mt-1 text-3xl font-black">{state.lesson.title}</h1>
-        <p className="mt-2 text-slate-600">{state.lesson.instructions}</p>
-      </div>
+      <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700"><LuSparkles />Skill lesson · Level {state.lesson.level}</p><h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{state.lesson.title}</h1><p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">{state.lesson.instructions}</p></div><span className="inline-flex w-fit items-center gap-2 rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-[0_3px_0_0_#cbd5e1]"><LuFileText />Practice document</span></header>
       
       {state.error && (
         <p className="mt-4 rounded-xl border-2 border-red-500 bg-red-50 p-4 font-bold text-red-700 shadow-[0_3px_0_0_#ef4444]">
@@ -115,8 +119,8 @@ export default function ComputerSkillWorkspacePage() {
       )}
       
       {/* Target Text Card */}
-      <section className="snp-brutal-card mt-5 p-6">
-        <p className="text-xs font-extrabold uppercase tracking-wider opacity-90">
+      <section className="snp-brutal-card mt-6 p-5 sm:p-6">
+        <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider opacity-90"><LuFileText />
           Type this text first
         </p>
         <p className="mt-3 whitespace-pre-wrap text-lg font-bold leading-8">
@@ -125,25 +129,25 @@ export default function ComputerSkillWorkspacePage() {
       </section>
       
       {/* Toolbar Container */}
-      <div className="mt-5 flex flex-wrap gap-2 rounded-xl border-[3px] border-slate-800 bg-white p-3 shadow-[0_4px_0_0_#334155]">
-        {tools.map((tool) => (
+      <div className="snp-scrollbar mt-5 flex gap-2 overflow-x-auto rounded-xl border-2 border-slate-800 bg-white p-3 shadow-[0_4px_0_0_#334155]">
+        {tools.map(([tool, Icon]) => (
           <button
-            className={`rounded-xl px-3 py-2 text-sm font-black border-2 border-slate-800 transition-all hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer ${
+            className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-black border-2 border-slate-800 transition-all hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer ${
               applied.includes(tool)
                 ? "bg-emerald-100 text-emerald-800 shadow-[0_2px_0_0_#059669]"
-                : "bg-slate-100 text-slate-750 shadow-[0_2px_0_0_#334155]"
+                : "bg-slate-100 text-slate-700 shadow-[0_2px_0_0_#334155]"
             }`}
             onClick={() => apply(tool)}
             type="button"
             key={tool}
           >
-            {tool}
+            <Icon size={16} />{tool}
           </button>
         ))}
       </div>
       
       {/* Editor & Requirements Container */}
-      <section className="snp-brutal-card-slate mt-5 p-6">
+      <section className="snp-brutal-card-slate mt-5 p-4 sm:p-6">
         <textarea
           className="min-h-[330px] w-full resize-none rounded-xl border-2 border-slate-800 p-5 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-colors shadow-[0_2px_0_0_#334155]"
           onChange={(event) => {
@@ -164,8 +168,8 @@ export default function ComputerSkillWorkspacePage() {
           value={text}
         />
         
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <p className="text-sm font-black text-slate-800">Requirements</p>
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <p className="flex items-center gap-2 text-sm font-black text-slate-800"><LuCheck className="text-emerald-600" />Requirements</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {requirements.map((item) => (
               <span
@@ -185,7 +189,7 @@ export default function ComputerSkillWorkspacePage() {
       </section>
       
       <button
-        className="snp-brutal-button mt-6 w-full sm:w-auto"
+        className="snp-brutal-button mt-6 w-full px-7 sm:w-auto"
         disabled={!text.trim()}
         onClick={complete}
         type="button"

@@ -7,6 +7,7 @@ import { validate } from "../middleware/validate.js";
 import {
   loginSchema,
   logoutSchema,
+  registerSchema,
   refreshSchema,
 } from "../validators/authValidators.js";
 
@@ -30,6 +31,12 @@ router.post(
   loginLimiter,
   validate(loginSchema),
   authController.login,
+);
+router.post(
+  "/register",
+  loginLimiter,
+  validate(registerSchema),
+  authController.register,
 );
 router.post("/session", authController.restoreSession);
 router.post("/refresh", validate(refreshSchema), authController.refresh);

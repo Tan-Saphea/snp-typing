@@ -11,7 +11,6 @@
     "test": "node --test",
     "smoke:auth": "node scripts/smoke-auth.mjs",
     "smoke:learning": "node scripts/smoke-learning.mjs",
-    "smoke:full": "node scripts/smoke-full.mjs",
     "seed": "node src/seeds/index.js"
   },
   "dependencies": {

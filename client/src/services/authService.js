@@ -5,6 +5,11 @@ export async function loginRequest(credentials) {
   return response.data.data;
 }
 
+export async function registerRequest(profile) {
+  const response = await publicApi.post("/auth/register", profile);
+  return response.data.data;
+}
+
 export async function refreshRequest(refreshToken) {
   const response = await publicApi.post(
     "/auth/refresh",

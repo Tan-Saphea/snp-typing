@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   LuBell,
-  LuBookOpen,
   LuChartBar,
   LuChevronRight,
-  LuClipboardCheck,
   LuDumbbell,
   LuFileText,
   LuGamepad2,
@@ -15,13 +13,11 @@ import {
   LuLogOut,
   LuMenu,
   LuMonitor,
-  LuSchool,
   LuSettings,
   LuSparkles,
   LuTimer,
   LuTrophy,
   LuUser,
-  LuUsers,
   LuX,
 } from "react-icons/lu";
 import { NavLink, useLocation, useNavigate } from "../components/NextRouter.jsx";
@@ -38,18 +34,7 @@ const studentNavigation = [
   { to: "/games", icon: LuGamepad2, label: "Typing Games" },
   { to: "/computer-skills", icon: LuMonitor, label: "Computer Skills" },
   { to: "/progress", icon: LuChartBar, label: "My Progress" },
-  { to: "/leaderboard", icon: LuTrophy, label: "Leaderboard" },
-];
-
-const staffNavigation = [
-  { to: "/", icon: LuLayoutDashboard, label: "Teacher Dashboard" },
-  { to: "/students", icon: LuUsers, label: "Students" },
-  { to: "/classes", icon: LuSchool, label: "Classes" },
-  { to: "/lesson-manager", icon: LuBookOpen, label: "Lessons" },
-  { to: "/assignments", icon: LuClipboardCheck, label: "Assignments" },
-  { to: "/reports", icon: LuFileText, label: "Reports" },
-  { to: "/english", icon: LuKeyboard, label: "English Curriculum" },
-  { to: "/khmer", icon: LuLanguages, label: "Khmer Curriculum" },
+  { to: "/report", icon: LuFileText, label: "A4 Report" },
   { to: "/leaderboard", icon: LuTrophy, label: "Leaderboard" },
 ];
 
@@ -99,8 +84,7 @@ export default function StudentLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username;
-  const isStaff = user?.role === "admin" || user?.role === "teacher";
-  const mainNavigation = isStaff ? staffNavigation : studentNavigation;
+  const mainNavigation = studentNavigation;
   const currentLabel = useMemo(() => {
     const items = [...mainNavigation, ...bottomNavigation];
     return items.find((item) => item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to))?.label ?? (location.pathname.startsWith("/lessons/") ? "Typing Lesson" : "SNP Typing");
@@ -108,7 +92,7 @@ export default function StudentLayout({ children }) {
 
   useEffect(() => {
     try {
-      const local = JSON.parse(window.localStorage.getItem("snp-student-settings")) || {};
+      const local = JSON.parse(window.localStorage.getItem("snp-learner-settings")) || {};
       const fontSize = user?.preferences?.fontSize ?? (local.largeText ? "large" : "normal");
       const theme = user?.preferences?.theme ?? local.theme ?? "light";
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -121,7 +105,13 @@ export default function StudentLayout({ children }) {
 
   useEffect(() => { setSidebarOpen(false); setShowNotifications(false); }, [location.pathname]);
   useEffect(() => {
-    function closeOnEscape(event) { if (event.key === "Escape") setSidebarOpen(false); }
+    function closeOnEscape(event) {
+      if (event.key === "Escape") {
+        setSidebarOpen(false);
+        setShowNotifications(false);
+        setShowAbout(false);
+      }
+    }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
@@ -151,7 +141,7 @@ export default function StudentLayout({ children }) {
               }`}>
                 {user?.gender === "male" ? <span className="text-[17px]">♂️</span> : user?.gender === "female" ? <span className="text-[17px]">♀️</span> : <LuUser size={19} strokeWidth={2.5} />}
               </span>
-              <span className="hidden min-w-0 text-left sm:block"><span className="block max-w-36 truncate text-sm font-black text-ink">{displayName}</span><span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">{user?.role}</span></span>
+              <span className="hidden min-w-0 text-left sm:block"><span className="block max-w-36 truncate text-sm font-black text-ink">{displayName}</span><span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Learner</span></span>
             </NavLink>
           </div>
         </header>
@@ -160,15 +150,15 @@ export default function StudentLayout({ children }) {
 
       {showAbout && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/65 p-5 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="snp-modal-card relative w-full max-w-md p-6 text-center animate-in zoom-in-95 duration-200">
+          <div className="snp-modal-card relative w-full max-w-md p-6 text-center animate-in zoom-in-95 duration-200" aria-labelledby="about-creator-title" aria-modal="true" role="dialog">
             <button className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-xl border-2 border-slate-900 bg-slate-100 text-slate-600 transition hover:-translate-y-0.5 hover:bg-slate-200 hover:text-slate-900 active:translate-y-[1px] font-black" onClick={() => setShowAbout(false)} type="button">×</button>
             <div className="mx-auto h-28 w-28 overflow-hidden rounded-3xl border-2 border-slate-900 bg-slate-100 shadow-[0_5px_0_0_#334155]">
               <img src="/creator.jpg" alt="Tan Saphea" className="h-full w-full object-cover" />
             </div>
-            <h2 className="mt-4 text-2xl font-black text-ink">Tan Saphea (តាន់ សាភា)</h2>
+            <h2 className="mt-4 text-2xl font-black text-ink" id="about-creator-title">Tan Saphea (តាន់ សាភា)</h2>
             <div className="mt-5 space-y-2.5 text-left">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 leading-relaxed">
-                💼 <b>Role:</b> Computer management & digital marketing at snpis
+                💼 <b>Work:</b> Computer management & digital marketing at snpis
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 leading-relaxed">
                 🚀 <b>Founder:</b> Phumcode Academy

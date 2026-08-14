@@ -52,6 +52,15 @@ export const login = asyncHandler(async (request, response) => {
   response.status(200).json({ data: sessionPayload(request, session) });
 });
 
+export const register = asyncHandler(async (request, response) => {
+  const session = await authService.register(
+    request.validated.body,
+    requestContext(request),
+  );
+  setRefreshCookie(response, session);
+  response.status(201).json({ data: sessionPayload(request, session) });
+});
+
 export const refresh = asyncHandler(async (request, response) => {
   const refreshToken = readRefreshToken(request);
 

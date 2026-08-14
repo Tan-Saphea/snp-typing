@@ -1,4 +1,4 @@
-import { ACTIVE_USER_STATUSES, USER_ROLES } from "@snp/shared";
+import { ACTIVE_USER_STATUSES } from "@snp/shared";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
@@ -35,19 +35,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     passwordHash: { type: String, required: true, select: false },
-    role: {
-      type: String,
-      enum: Object.values(USER_ROLES),
-      required: true,
-      index: true,
-    },
     firstName: { type: String, required: true, trim: true, maxlength: 80 },
     lastName: { type: String, trim: true, maxlength: 80, default: "" },
     khmerName: { type: String, trim: true, maxlength: 160, default: "" },
     studentId: { type: String, unique: true, sparse: true, trim: true },
     gender: { type: String, enum: ["female", "male", "other", "unspecified"], default: "unspecified" },
     dateOfBirth: { type: Date },
-    class: { type: mongoose.Schema.Types.ObjectId, ref: "Class", index: true },
     avatar: { type: String, default: "" },
     status: {
       type: String,

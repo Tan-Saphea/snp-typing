@@ -97,14 +97,26 @@ async function startProductionRenderer() {
       NODE_ENV: "production",
       PORT: String(port),
     },
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
 
+  let serverErrorOutput = "";
+  if (rendererServer.stderr) {
+    rendererServer.stderr.on("data", (data) => {
+      serverErrorOutput += data.toString();
+    });
+  }
+
   const serverFailure = new Promise((_, reject) => {
-    rendererServer.once("error", reject);
+    rendererServer.once("error", (error) => {
+      reject(new Error(`Failed to start Next.js renderer process: ${error.message}`));
+    });
     rendererServer.once("exit", (code) => {
-      reject(new Error(`The Next.js renderer stopped with code ${code}.`));
+      const errorMsg = serverErrorOutput.trim()
+        ? `\n\nRenderer output:\n${serverErrorOutput}`
+        : "";
+      reject(new Error(`The Next.js renderer stopped with code ${code}.${errorMsg}`));
     });
   });
   await Promise.race([waitForRenderer(rendererUrl), serverFailure]);
@@ -120,14 +132,27 @@ function isAllowedExternalUrl(value) {
   }
 }
 
+function getIconPath() {
+  if (isDevelopment) {
+    return path.join(__dirname, "../client/public/logo.png");
+  }
+  const serverRoot = getStandaloneServerRoot();
+  if (serverRoot) {
+    return path.join(serverRoot, "public", "logo.png");
+  }
+  return null;
+}
+
 function createMainWindow(rendererEntry) {
   const state = readWindowState();
+  const iconPath = getIconPath();
   const window = new BrowserWindow({
     ...state,
     minWidth: 1100,
     minHeight: 700,
     show: false,
     backgroundColor: "#f8fafc",
+    ...(iconPath && fs.existsSync(iconPath) ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,

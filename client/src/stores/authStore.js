@@ -14,11 +14,9 @@ import {
   loginRequest,
   logoutRequest,
   refreshRequest,
+  registerRequest,
   restoreSessionRequest,
 } from "../services/authService.js";
-import { getSchoolSettings } from "../services/settingsService.js";
-
-const defaultSchoolSettings = { minimumPassingAccuracy: 70, showLiveWpm: true, allowTypingGames: true, lessonUnlocking: true, leaderboardVisibility: "school" };
 
 async function persistRefreshToken(refreshToken) {
   if (isDesktopApp && refreshToken) {
@@ -31,13 +29,7 @@ export const useAuthStore = create((set, get) => ({
   accessToken: null,
   status: "idle",
   error: null,
-  schoolSettings: defaultSchoolSettings,
   setUser: (user) => set({ user }),
-  setSchoolSettings: (schoolSettings) => set({ schoolSettings }),
-  loadSchoolSettings: async () => {
-    try { set({ schoolSettings: await getSchoolSettings() }); }
-    catch { set({ schoolSettings: defaultSchoolSettings }); }
-  },
 
   initialize: async () => {
     if (get().status !== "idle") {
@@ -56,7 +48,6 @@ export const useAuthStore = create((set, get) => ({
         }
 
         await get().refresh();
-        await get().loadSchoolSettings();
         return;
       }
 
@@ -72,7 +63,6 @@ export const useAuthStore = create((set, get) => ({
         accessToken: session.accessToken,
         status: "authenticated",
       });
-      await get().loadSchoolSettings();
     } catch {
       await clearDesktopRefreshToken();
       set({
@@ -94,7 +84,24 @@ export const useAuthStore = create((set, get) => ({
         accessToken: session.accessToken,
         status: "authenticated",
       });
-      await get().loadSchoolSettings();
+      return true;
+    } catch (error) {
+      set({ error: getApiErrorMessage(error), status: "anonymous" });
+      return false;
+    }
+  },
+
+  register: async (profile) => {
+    set({ error: null });
+
+    try {
+      const session = await registerRequest(profile);
+      await persistRefreshToken(session.refreshToken);
+      set({
+        user: session.user,
+        accessToken: session.accessToken,
+        status: "authenticated",
+      });
       return true;
     } catch (error) {
       set({ error: getApiErrorMessage(error), status: "anonymous" });
@@ -127,7 +134,6 @@ export const useAuthStore = create((set, get) => ({
         accessToken: null,
         status: "anonymous",
         error: null,
-        schoolSettings: defaultSchoolSettings,
       });
     }
   },
@@ -144,7 +150,6 @@ configureApiSession({
       user: null,
       accessToken: null,
       status: "anonymous",
-      schoolSettings: defaultSchoolSettings,
     });
   },
 });

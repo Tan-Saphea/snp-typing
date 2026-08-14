@@ -19,8 +19,6 @@ export const createResultSchema = z.object({
 
 export const listResultsSchema = z.object({
   query: z.object({
-    student: z.string().regex(/^[a-f\d]{24}$/i).optional(),
-    class: z.string().regex(/^[a-f\d]{24}$/i).optional(),
     language: z.enum(["en", "km"]).optional(),
     mode: z.enum(["lesson", "test", "practice", "game"]).optional(),
     from: z.string().datetime().optional(),

@@ -12,7 +12,7 @@ const modes = [
   { key: "word", emoji: "🎈", label: { en: "Word Balloons", km: "ប៉េងប៉ោងពាក្យ" }, note: { en: "Warm up with short, friendly words.", km: "ហាត់ជាមួយពាក្យខ្លីៗ និងងាយៗ។" }, tone: "bg-sky-100 text-sky-800" },
   { key: "sentence", emoji: "🚂", label: { en: "Sentence Train", km: "រថភ្លើងប្រយោគ" }, note: { en: "Join words into smooth sentences.", km: "ភ្ជាប់ពាក្យទៅជាប្រយោគរលូន។" }, tone: "bg-amber-100 text-amber-800" },
   { key: "paragraph", emoji: "🚀", label: { en: "Story Rocket", km: "រ៉ុក្កែតអត្ថបទ" }, note: { en: "Build rhythm with a longer challenge.", km: "បង្កើនចង្វាក់ជាមួយអត្ថបទវែង។" }, tone: "bg-violet-100 text-violet-800" },
-  { key: "custom", emoji: "🪄", label: { en: "Magic Text", km: "អត្ថបទវេទមន្ត" }, note: { en: "Practice text from your teacher or family.", km: "ហាត់អត្ថបទពីអ្នកគ្រូ ឬគ្រួសារ។" }, tone: "bg-rose-100 text-rose-800" },
+  { key: "custom", emoji: "🪄", label: { en: "Magic Text", km: "អត្ថបទវេទមន្ត" }, note: { en: "Practice any text you want to improve.", km: "ហាត់អត្ថបទណាមួយដែលអ្នកចង់អភិវឌ្ឍ។" }, tone: "bg-rose-100 text-rose-800" },
 ];
 
 const pageCopy = {

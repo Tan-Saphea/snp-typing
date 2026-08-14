@@ -1,26 +1,61 @@
 import { useEffect, useState } from "react";
+import { LuArrowRight, LuGamepad2, LuSparkles, LuTimer, LuTrophy } from "react-icons/lu";
 import { Link } from "../components/NextRouter.jsx";
 
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
+import LearningCategoryCard, { learningCardPalette, learningCardPatterns } from "../components/LearningCategoryCard.jsx";
+import { GAME_LIST } from "../features/games/gameEngine.js";
 import { getApiErrorMessage } from "../services/api.js";
 import { listLessons } from "../services/lessonService.js";
-import { useAuthStore } from "../stores/authStore.js";
-
-const games = [
-  ["falling-words", "Falling Words", "⌄", "Type each word before it reaches the bottom."],
-  ["balloon-typing", "Balloon Typing", "◯", "Type the word to pop each balloon."],
-  ["picture-typing", "Picture Typing", "▧", "Look at a picture and type its name."],
-  ["speed-challenge", "Speed Challenge", "⚡", "Type as many correct words as possible."],
-];
 
 export default function GamesPage() {
-  const gamesAllowed = useAuthStore((store) => store.schoolSettings.allowTypingGames || store.user?.role !== "student");
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   useEffect(() => { listLessons({ type: "game" }).then(setLessons).catch((value) => setError(getApiErrorMessage(value))).finally(() => setLoading(false)); }, []);
   if (loading) return <PageLoader />;
   if (error) return <PageError message={error} />;
-  if (!gamesAllowed) return <div className="snp-card mx-auto max-w-2xl p-8 text-center"><div className="text-5xl">⌛</div><h1 className="mt-4 text-2xl font-black">Typing Games Are Paused</h1><p className="mt-2 text-slate-600">Your teacher has paused games for this class. Continue with lessons or practice.</p></div>;
-  return <div><p className="text-sm font-extrabold uppercase tracking-[0.16em] text-primary-600">Learn Through Play</p><h1 className="mt-2 text-3xl font-black">Typing Games</h1><p className="mt-2 text-slate-600">Every game uses real curriculum words and saves your score.</p><div className="mt-6 grid gap-5 xl:grid-cols-2">{games.map(([key, title, icon, description], index) => <article className="snp-card p-6" key={key}><div className="grid h-14 w-14 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-2xl font-black text-[#047857] shadow-[0_2px_0_0_#334155]">{icon}</div><h2 className="mt-4 text-xl font-black">{title}</h2><p className="mt-2 text-slate-600">{description}</p><div className="mt-5 flex gap-3">{[["en", "English"], ["km", "ខ្មែរ"]].map(([language, label]) => { const lesson = lessons.find((item) => item.language === language && item.title.toLowerCase().includes(title.toLowerCase())); return <Link className={`rounded-xl border-2 px-4 py-2 text-sm font-black transition-all ${lesson ? "border-slate-800 bg-[#059669] text-white shadow-[0_3px_0_0_#065f46] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none" : "border-slate-300 bg-slate-100 text-slate-400 pointer-events-none"}`} to={lesson ? `/games/${key}/${lesson.id}` : "#"} key={language}>{label}</Link>; })}</div><p className="mt-4 text-xs font-bold text-slate-400">Game {index + 1} of 4</p></article>)}</div></div>;
+  return (
+    <div className="space-y-7">
+      <section className="snp-game-library-hero relative overflow-hidden p-6 text-white sm:p-8">
+        <div className="pointer-events-none absolute -right-10 -top-16 text-[12rem] opacity-10"><LuGamepad2 /></div>
+        <div className="relative max-w-2xl">
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300"><LuSparkles />Learn through play</p>
+          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] sm:text-5xl">Typing Arcade</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Choose a challenge, select English or Khmer, and turn accurate typing into points, streaks, and stars.</p>
+          <div className="mt-6 flex flex-wrap gap-3 text-xs font-bold"><span className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2"><LuTrophy className="text-amber-300" />Scores saved</span><span className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2"><LuTimer className="text-sky-300" />Quick rounds</span><span className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2">ក · A Grapheme-aware</span></div>
+        </div>
+      </section>
+
+      <div className="snp-learning-grid">
+        {GAME_LIST.map((config, index) => {
+          const color = learningCardPalette[[1, 2, 0, 6][index] ?? index];
+          const footer = (
+            <div className="snp-learning-card-actions">
+              {[["en", "English"], ["km", "ខ្មែរ"]].map(([language, label]) => {
+                const lesson = lessons.find((item) => item.language === language && item.title.toLowerCase().includes(config.lessonName.toLowerCase()));
+                return lesson ? <Link className="snp-learning-card-action" to={`/games/${config.id}/${lesson.id}`} key={language}>{label}<LuArrowRight /></Link> : <span className="snp-learning-card-action pointer-events-none opacity-40" key={language}>{label}</span>;
+              })}
+            </div>
+          );
+          return (
+            <LearningCategoryCard
+              accent={color.accent}
+              badge={`0${index + 1}`}
+              deep={color.deep}
+              description={config.description}
+              footer={footer}
+              key={config.id}
+              pattern={learningCardPatterns[index % learningCardPatterns.length]}
+              subtitle={`Typing game · ${config.duration} seconds`}
+              title={config.title}
+              visual={<span>{config.icon}</span>}
+            >
+              <div className="snp-learning-card-meta"><span><LuTimer />{config.duration}s</span><span>{config.lives ? `${config.lives} hearts` : "Unlimited tries"}</span></div>
+            </LearningCategoryCard>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

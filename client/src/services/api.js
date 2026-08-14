@@ -81,11 +81,25 @@ export function getApiErrorMessage(error) {
   }
 
   if (!error.response) {
-    return "SNP Typing cannot reach the school server. Check the connection and try again.";
+    return "SNP Typing cannot reach the application server. Check the connection and try again.";
   }
 
-  return (
-    error.response.data?.error?.message ??
-    "Something went wrong. Please try again."
-  );
+  const apiError = error.response.data?.error;
+  const firstDetail = apiError?.details?.find((detail) => detail?.message);
+
+  if (firstDetail) {
+    const field = firstDetail.field?.split(".").at(-1);
+    const labels = {
+      firstName: "First name",
+      lastName: "Last name",
+      khmerName: "Khmer name",
+      username: "Username",
+      password: "Password",
+    };
+    return field && labels[field]
+      ? `${labels[field]}: ${firstDetail.message}`
+      : firstDetail.message;
+  }
+
+  return apiError?.message ?? "Something went wrong. Please try again.";
 }

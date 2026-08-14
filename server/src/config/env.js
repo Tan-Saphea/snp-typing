@@ -34,8 +34,6 @@ const environmentSchema = z.object({
   ALLOW_NULL_ORIGIN: booleanFromEnvironment(false),
   TRUST_PROXY: booleanFromEnvironment(false),
   COOKIE_NAME: z.string().min(1).default("snp_refresh"),
-  SEED_ADMIN_PASSWORD: z.string().min(10).optional(),
-  SEED_TEACHER_PASSWORD: z.string().min(10).optional(),
   SEED_STUDENT_PASSWORD: z.string().min(10).optional(),
 });
 

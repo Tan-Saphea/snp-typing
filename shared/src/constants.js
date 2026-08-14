@@ -1,9 +1,3 @@
-export const USER_ROLES = Object.freeze({
-  ADMIN: "admin",
-  TEACHER: "teacher",
-  STUDENT: "student",
-});
-
 export const LANGUAGES = Object.freeze({
   ENGLISH: "en",
   KHMER: "km",

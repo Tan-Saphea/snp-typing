@@ -9,7 +9,6 @@ const resultSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    class: { type: mongoose.Schema.Types.ObjectId, ref: "Class", index: true },
     lesson: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Lesson",
@@ -64,6 +63,4 @@ const resultSchema = new mongoose.Schema(
 
 resultSchema.index({ student: 1, completedAt: -1 });
 resultSchema.index({ student: 1, lesson: 1, score: -1 });
-resultSchema.index({ class: 1, language: 1, completedAt: -1 });
-
 export const Result = mongoose.model("Result", resultSchema);

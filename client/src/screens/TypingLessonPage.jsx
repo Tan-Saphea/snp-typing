@@ -42,7 +42,6 @@ export default function TypingLessonPage() {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const submittedRef = useRef(false);
-  const showLiveWpm = useAuthStore((store) => store.schoolSettings.showLiveWpm);
   const showVirtualKeyboard = useAuthStore((store) => store.user?.preferences?.virtualKeyboard !== false);
   const [sessionActive, setSessionActive] = useState(false);
   const [state, setState] = useState({ loading: true, data: null, error: "" });
@@ -142,7 +141,7 @@ export default function TypingLessonPage() {
             <div className="flex items-center gap-3">
               <button className="snp-icon-button rounded-xl" aria-label="Exit lesson" onClick={() => navigate(backPath)} title="Exit lesson" type="button"><LuX size={21} /></button>
               <div className="min-w-0 flex-1"><p className="text-[10px] font-black uppercase tracking-wider text-primary-600">Level {lesson.level} · Lesson {lesson.order}</p><h1 className="truncate text-base font-black sm:text-lg">{lesson.title}</h1></div>
-              <div className="hidden w-[470px] grid-cols-4 gap-2 md:grid"><SessionMetric label="Time" value={formatTimer(engine.elapsedTime)} /><SessionMetric label={lesson.language === "km" ? "CPM" : "WPM"} value={showLiveWpm ? primarySpeed : "Hidden"} tone="text-primary-700" /><SessionMetric label="Accuracy" value={`${Math.round(engine.accuracy)}%`} tone="text-emerald-700" /><SessionMetric label="Errors" value={engine.errors} tone="text-red-600" /></div>
+              <div className="hidden w-[470px] grid-cols-4 gap-2 md:grid"><SessionMetric label="Time" value={formatTimer(engine.elapsedTime)} /><SessionMetric label={lesson.language === "km" ? "CPM" : "WPM"} value={primarySpeed} tone="text-primary-700" /><SessionMetric label="Accuracy" value={`${Math.round(engine.accuracy)}%`} tone="text-emerald-700" /><SessionMetric label="Errors" value={engine.errors} tone="text-red-600" /></div>
             </div>
             <div className="mt-2 flex items-center gap-3"><div className="h-4 flex-1 overflow-hidden rounded-xl border-2 border-slate-800 bg-slate-100"><div className="h-full bg-[#059669] transition-all" style={{ width: `${lessonProgress}%` }} /></div><span className="text-xs font-black text-slate-500">{Math.round(lessonProgress)}%</span></div>
             <div className="mt-2"><TypingAdventureHud compact engine={engine} language={lesson.language} /></div>

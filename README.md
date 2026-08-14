@@ -1,8 +1,8 @@
 # SNP Typing
 
-SNP Typing is a desktop-first English and Khmer typing education system for children, students, teachers, and school computer labs.
+SNP Typing is a learner-first English and Khmer typing education application for children, students, and independent practice.
 
-The application now includes the student learning system, complete structured English and Khmer curriculum records, practice, timed tests, four games, Computer Skills, progress, leaderboards, teacher management, reports, school settings, secure authentication, and Electron packaging configuration.
+The application includes learner self-registration, structured English and Khmer curricula, step-by-step lesson unlocking, practice, timed tests, four games, Computer Skills, personal progress, printable A4 reports, leaderboards, secure authentication, and Electron packaging.
 
 ## Source curriculum status
 
@@ -12,7 +12,7 @@ The requested PDF was not available in the initial workspace, so it has **not** 
 
 - Node.js 20 or newer
 - npm 10 or newer
-- MongoDB 7 or newer, locally or on a reachable school server
+- MongoDB 7 or newer, locally or on a reachable application server
 - Windows 10/11 for final installer verification
 
 ## Local setup
@@ -34,15 +34,17 @@ Change all JWT and seed password values in `server/.env`. Keep production secret
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Run API, renderer, and Electron |
-| `npm run seed` | Upsert development users, class, lessons, and tests |
+| `npm run seed` | Upsert development learners, lessons, and tests |
 | `npm test` | Run workspace tests |
 | `npm run build` | Validate shared/server code and build the Next.js application |
 | `npm run dist` | Build the Windows NSIS installer |
+| `npm run dist:win` | Alias for building the Windows x64 setup wizard |
 | `npm run smoke:auth -w @snp/server` | Verify API and authentication against a running server |
-| `npm run smoke:learning -w @snp/server` | Verify lessons, results, unlocking, Khmer scoring, and progress |
-| `npm run smoke:full -w @snp/server` | Verify all roles, curriculum, activities, management, settings, reports, and persistence |
+| `npm run smoke:learning -w @snp/server` | Verify registration, sequential lesson protection, results, Khmer scoring, and progress |
 
-The Windows artifact is configured as `release/SNP-Typing-Setup.exe`. Building and signing the release on a controlled Windows build agent is the recommended production path.
+The Windows artifact is configured as `release/SNP-Typing-Setup.exe`. It uses the SNP logo, an assisted step-by-step setup wizard, per-user installation by default, desktop and Start Menu shortcuts, and a standard Windows uninstaller that removes local application data. See [Windows setup and uninstall](docs/WINDOWS_INSTALLER.md).
+
+Unsigned local builds may display Microsoft Defender SmartScreen. Code-signing the release on a controlled Windows build agent is recommended before broad distribution.
 
 ## Development accounts
 
@@ -67,11 +69,12 @@ Twenty-six source-dependent records remain unpublished with `contentStatus: "nee
 
 ## Learning flow
 
-1. Sign in with a seeded student account.
-2. Open English Typing or Khmer Typing and select the first unlocked lesson.
+1. Create your own learner username and password, or sign in with a development account.
+2. Open English Typing, Khmer Typing, or Computer Skills. The first lesson is open.
 3. The timer starts on the first committed key, not when the page opens.
 4. English uses standard five-character WPM; Khmer accuracy and CPM use grapheme clusters.
-5. A completed attempt is saved to MongoDB, updates dashboard progress, awards stars, and unlocks the next lesson when the passing rules are met.
+5. A passing attempt is saved to MongoDB and unlocks the next lesson in that learning path. Practice, tests, and games remain open.
+6. The personal A4 report can be printed or saved as PDF from the Progress page or navigation.
 
 ## Security notes
 
@@ -79,4 +82,4 @@ Twenty-six source-dependent records remain unpublished with `contentStatus: "nee
 - The preload bridge exposes only application metadata and encrypted refresh-token operations.
 - Access JWTs remain in renderer memory; refresh JWTs rotate and are stored hashed in MongoDB.
 - Electron persists refresh tokens through operating-system encryption. Browser development uses an HttpOnly cookie.
-- The API must be served over HTTPS outside a trusted school LAN.
+- The API must be served over HTTPS outside a trusted local network.

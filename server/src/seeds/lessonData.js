@@ -24,7 +24,7 @@ function source(exercise, contentStatus = "verified", sourceBook = specification
     sourceExercise: exercise,
     reviewStatus,
     reviewNotes: contentStatus === "needs_review"
-      ? "The source PDF is not present. An administrator must verify the exact page and wording before publishing."
+      ? "The source PDF is not present. A content reviewer must verify the exact page and wording before publishing."
       : contentStatus === "custom"
         ? "Original SNP Typing lesson approved by automated curriculum, Unicode, and keyboard-coverage checks."
         : "Created from content explicitly supplied in the SNP Typing specification.",
@@ -185,7 +185,6 @@ function lesson({
     timeLimit,
     starsEnabled: true,
     allowBackspace: true,
-    isLocked: false,
     isPublished,
     isActive: true,
     tags,
@@ -341,7 +340,7 @@ const englishLevel6 = [
 
 const englishLevel7 = [
   lesson({ title: "The Lion and the Mouse", slug: "en-story-lion-mouse", language: "en", category: "stories", level: 7, order: 1, type: "story", blocks: [{ kind: "story", text: "A lion was sleeping when a little mouse ran over his paw. The lion caught the mouse, but the mouse asked to be set free. Later, the lion was trapped in a net. The mouse heard him, chewed the ropes, and helped him escape. The lion learned that even a small friend can give great help.", question: "How did the mouse help the lion?", options: ["It chewed the ropes.", "It carried the lion.", "It found food."], answer: "It chewed the ropes." }], instructions: "Read the story, type it, and answer the question.", sourceExercise: "English Level 7 - The Lion and the Mouse (public-domain adaptation)", contentStatus: "custom", unlockTrack: englishTrack }),
-  lesson({ title: "The Rainbow Fish", slug: "en-story-rainbow-fish", language: "en", category: "stories", level: 7, order: 2, type: "story", blocks: [{ kind: "story", text: "Authorized source text is awaiting review before publication.", question: "Source review required", options: ["Review required"], answer: "Review required" }], instructions: "An administrator must verify the authorized source text before publishing.", sourceExercise: "English Level 7 - The Rainbow Fish", sourceBook: pendingBook, contentStatus: "needs_review", unlockTrack: englishTrack }),
+  lesson({ title: "The Rainbow Fish", slug: "en-story-rainbow-fish", language: "en", category: "stories", level: 7, order: 2, type: "story", blocks: [{ kind: "story", text: "Authorized source text is awaiting review before publication.", question: "Source review required", options: ["Review required"], answer: "Review required" }], instructions: "A content reviewer must verify the authorized source text before publishing.", sourceExercise: "English Level 7 - The Rainbow Fish", sourceBook: pendingBook, contentStatus: "needs_review", unlockTrack: englishTrack }),
   lesson({ title: "School Trip", slug: "en-story-school-trip", language: "en", category: "stories", level: 7, order: 3, type: "story", blocks: [{ kind: "story", text: "Dara's class visited a science garden. Before leaving school, the teacher reviewed the safety rules. At the garden, students observed plants, insects, and a small pond. They drew pictures and wrote new words in their notebooks. On the way home, Dara shared his notes with a friend and thanked the teacher for the trip.", question: "What did the students do at the garden?", options: ["They observed and took notes.", "They watched a movie.", "They stayed on the bus."], answer: "They observed and took notes." }], instructions: "Read, type, and answer the comprehension question.", sourceExercise: "English Level 7 - School Trip adaptation", contentStatus: "custom", unlockTrack: englishTrack }),
   paragraphLesson({ title: "Story Practice", slug: "en-story-practice", language: "en", category: "stories", level: 7, order: 4, text: "A short story has characters, a place, and events. I read the whole story before I type. Then I type one idea at a time and check the punctuation.", instructions: "Practice the habits used for story typing.", sourceExercise: "English Level 7 Practice", contentStatus: "custom", unlockTrack: englishTrack }),
   paragraphLesson({ title: "Story Review", slug: "en-story-review", language: "en", category: "stories", level: 7, order: 5, text: "Good readers look for the main idea. Good typists keep a steady rhythm. After typing, I answer the question using evidence from the story.", instructions: "Review reading and typing skills.", sourceExercise: "English Level 7 Review", contentStatus: "custom", difficulty: "medium", unlockTrack: englishTrack }),
