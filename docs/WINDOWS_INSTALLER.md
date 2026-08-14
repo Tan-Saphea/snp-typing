@@ -2,7 +2,7 @@
 
 ## Build the installer
 
-The renderer API address is compiled into the application. Set `NEXT_PUBLIC_API_URL` in `client/.env` to the HTTPS production API before making a public release. The current development value points to `http://localhost:5001/api`.
+The Windows desktop application includes its own local account, curriculum, result, progress, leaderboard, and settings service. It does not require MongoDB, the Express API, or internet access. Browser development continues to use `NEXT_PUBLIC_API_URL` and the normal server.
 
 From the repository root:
 
@@ -30,7 +30,7 @@ The application uses `build/icon.png`, and the setup/uninstaller wizard uses the
 6. Keep the desktop and Start Menu shortcuts selected, then choose **Install**.
 7. Choose **Finish** to open SNP Typing.
 
-The configured API must be reachable when the application opens. For a public installer, use a deployed HTTPS API rather than localhost.
+The application is ready to use offline immediately after installation. Create a learner account on the computer, then sign in with that local account. Accounts and progress remain on that Windows user profile unless the application is uninstalled.
 
 ## Uninstall completely
 
@@ -40,7 +40,7 @@ The configured API must be reachable when the application opens. For a public in
 4. Select the menu beside it and choose **Uninstall**.
 5. Confirm the uninstall wizard.
 
-The uninstaller removes the installed program, shortcuts, and SNP Typing's local desktop data. Learner results stored on the server are not deleted and become available again after reinstalling and signing in.
+The uninstaller removes the installed program, shortcuts, local learner accounts, and offline progress data. Export or print any progress report that must be retained before uninstalling.
 
 ## Upgrade
 

@@ -21,6 +21,7 @@ const {
   readWindowState,
   saveWindowState,
 } = require("./services/window-state.cjs");
+const { createOfflineApi } = require("./services/offline-api.cjs");
 
 const developmentUrl = process.env.ELECTRON_RENDERER_URL;
 const isDevelopment = Boolean(developmentUrl);
@@ -207,7 +208,7 @@ function createMainWindow(rendererEntry) {
   return window;
 }
 
-function registerIpcHandlers() {
+function registerIpcHandlers(offlineApi) {
   ipcMain.handle("app:get-info", () => ({
     version: app.getVersion(),
     platform: process.platform,
@@ -217,10 +218,15 @@ function registerIpcHandlers() {
     setRefreshToken(token),
   );
   ipcMain.handle("auth:clear-refresh-token", () => clearRefreshToken());
+  ipcMain.handle("offline:request", (_event, request) => offlineApi.request(request));
 }
 
 app.whenReady().then(async () => {
-  registerIpcHandlers();
+  const offlineApi = createOfflineApi({
+    dataPath: path.join(app.getPath("userData"), "offline-data.json"),
+    lessonsPath: path.join(__dirname, "resources", "lessons.json"),
+  });
+  registerIpcHandlers(offlineApi);
   let rendererEntry = developmentUrl;
 
   try {

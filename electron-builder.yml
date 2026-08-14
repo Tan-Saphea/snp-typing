@@ -6,7 +6,10 @@ compression: maximum
 directories:
   output: release
 files:
-  - electron/**/*
+  - electron/main.cjs
+  - electron/preload.cjs
+  - electron/services/**/*.cjs
+  - electron/resources/lessons.json
   - client/.next/standalone/**/*
   - package.json
 asarUnpack:

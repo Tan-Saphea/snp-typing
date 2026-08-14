@@ -2,7 +2,7 @@
 
 SNP Typing is a learner-first English and Khmer typing education application for children, students, and independent practice.
 
-The application includes learner self-registration, structured English and Khmer curricula, step-by-step lesson unlocking, practice, timed tests, four games, Computer Skills, personal progress, printable A4 reports, leaderboards, secure authentication, and Electron packaging.
+The application includes learner self-registration, structured English and Khmer curricula, step-by-step lesson unlocking, practice, timed tests, four games, Computer Skills, personal progress, printable A4 reports, leaderboards, secure authentication, and a fully offline Electron desktop mode.
 
 ## Source curriculum status
 
@@ -42,7 +42,7 @@ Change all JWT and seed password values in `server/.env`. Keep production secret
 | `npm run smoke:auth -w @snp/server` | Verify API and authentication against a running server |
 | `npm run smoke:learning -w @snp/server` | Verify registration, sequential lesson protection, results, Khmer scoring, and progress |
 
-The Windows artifact is configured as `release/SNP-Typing-Setup.exe`. It uses the SNP logo, an assisted step-by-step setup wizard, per-user installation by default, desktop and Start Menu shortcuts, and a standard Windows uninstaller that removes local application data. See [Windows setup and uninstall](docs/WINDOWS_INSTALLER.md).
+The Windows artifact is configured as `release/SNP-Typing-Setup.exe`. It uses the SNP logo, an assisted step-by-step setup wizard, per-user installation by default, desktop and Start Menu shortcuts, and a standard Windows uninstaller that removes local application data. The installed EXE uses its embedded lesson and account store—MongoDB, the API server, and internet access are not required. See [Windows setup and uninstall](docs/WINDOWS_INSTALLER.md).
 
 Unsigned local builds may display Microsoft Defender SmartScreen. Code-signing the release on a controlled Windows build agent is recommended before broad distribution.
 

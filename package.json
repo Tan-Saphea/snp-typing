@@ -1,6 +1,6 @@
 {
   "name": "snp-typing",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "SNP Typing educational desktop application",
   "author": "Tan Saphea",
@@ -12,15 +12,17 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,web,desktop -c blue,magenta,green \"npm run dev -w @snp/server\" \"npm run dev -w @snp/client\" \"wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .\"",
+    "dev": "npm run prepare:offline && concurrently -k -n api,web,desktop -c blue,magenta,green \"npm run dev -w @snp/server\" \"npm run dev -w @snp/client\" \"wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .\"",
     "dev:client": "npm run dev -w @snp/client",
     "dev:server": "npm run dev -w @snp/server",
-    "dev:electron": "wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .",
+    "dev:electron": "npm run prepare:offline && wait-on tcp:3000 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:3000 electron .",
     "build": "npm run build -w @snp/shared && npm run build -w @snp/client && npm run build -w @snp/server",
-    "test": "npm run test -w @snp/shared && npm run test -w @snp/server && npm run test -w @snp/client",
+    "test": "npm run test -w @snp/shared && npm run test -w @snp/server && npm run test -w @snp/client && npm run test:electron",
+    "test:electron": "npm run prepare:offline && node --test electron/test/*.test.cjs",
     "lint": "npm run lint -w @snp/server && npm run lint -w @snp/client",
     "seed": "npm run seed -w @snp/server",
-    "dist": "npm run build -w @snp/client && electron-builder --config electron-builder.yml --win --x64",
+    "prepare:offline": "node electron/scripts/prepare-offline-data.mjs",
+    "dist": "cross-env NEXT_PUBLIC_DESKTOP_BUILD=true npm run build -w @snp/client && npm run prepare:offline && electron-builder --config electron-builder.yml --win --x64",
     "dist:win": "npm run dist",
     "make": "npm run dist"
   },

@@ -25,3 +25,11 @@ export async function getDesktopAppInfo() {
     platform: "browser",
   };
 }
+
+export async function requestDesktopApi(request) {
+  if (!desktopBridge?.offline?.request) {
+    throw new Error("The desktop offline service is unavailable.");
+  }
+
+  return desktopBridge.offline.request(request);
+}

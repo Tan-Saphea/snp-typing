@@ -4,11 +4,13 @@
 
 SNP Typing is a learner-first English and Khmer typing application. It intentionally has no admin, teacher, classroom, assignment, or staff reporting workspace. Learners create their own accounts, progress through curriculum lessons in prerequisite order, and own only their personal results, progress, printable report, settings, and leaderboard identity.
 
-The system has three parts:
+The system has three runtime parts:
 
 1. **Next.js client** - App Router pages rendered in the browser and hosted inside Electron for desktop releases.
 2. **Express API** - authentication, lessons, results, progress, preferences, and leaderboard endpoints.
 3. **MongoDB** - learner accounts, refresh tokens, curriculum lessons, and immutable attempt results.
+
+The packaged Electron application also provides a self-contained offline mode. Electron IPC routes client service calls to a local JSON-backed store under the Windows user-data directory. Passwords use salted scrypt hashes, refresh tokens remain in operating-system encrypted storage, lesson data is bundled at build time, and writes use atomic file replacement. Browser deployments continue to use Express and MongoDB.
 
 ## Monorepo
 
@@ -126,7 +128,7 @@ Results are the source of truth for dashboard, progress, streak, and leaderboard
 ## Security boundary
 
 - Electron uses `contextIsolation: true`, `nodeIntegration: false`, and sandboxing.
-- The preload bridge exposes only app metadata and encrypted refresh-token operations.
+- The preload bridge exposes app metadata, encrypted refresh-token operations, and a narrow request channel to the embedded offline service.
 - Rendered content cannot import Node or Electron modules.
 - Express applies Helmet, CORS, rate limiting, request validation, and a stable error envelope.
 - Production API traffic must use HTTPS outside a trusted local network.

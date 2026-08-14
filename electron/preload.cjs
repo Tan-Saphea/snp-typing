@@ -13,5 +13,8 @@ contextBridge.exposeInMainWorld(
       clearRefreshToken: () =>
         ipcRenderer.invoke("auth:clear-refresh-token"),
     }),
+    offline: Object.freeze({
+      request: (request) => ipcRenderer.invoke("offline:request", request),
+    }),
   }),
 );

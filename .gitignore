@@ -13,3 +13,4 @@ tmp/
 source/*.pdf
 client/dist/
 client/.next/
+electron/resources/lessons.json
