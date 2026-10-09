@@ -76,6 +76,7 @@ Access JWTs are short lived and stay in renderer memory. Refresh tokens rotate a
 
 ```text
 Register or login -> bcrypt hashing/verification -> access JWT + rotating refresh token
+Forgot password -> recovery-answer verification -> password update + revoke all sessions
 API 401 -> one refresh attempt -> retry the original request once
 Logout -> revoke refresh record -> clear encrypted local token
 ```
@@ -86,7 +87,7 @@ Authentication answers only whether an active learner account may use the app. T
 
 ### User
 
-- username, optional email, password hash
+- username, optional email, password hash, recovery question, and hashed recovery answer
 - first name, last name, Khmer name, optional learner ID
 - gender, avatar, active status
 - sound, keyboard, font-size, and theme preferences

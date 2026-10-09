@@ -1,54 +1,58 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
+  Button,
+  Card,
+  Progress,
+  Tag,
+  Typography,
+} from "antd";
+import {
   LuArrowLeft,
-  LuCircleCheckBig,
+  LuCompass,
+  LuFlame,
   LuGamepad2,
-  LuHeart,
+  LuGhost,
+  LuKeyboard,
+  LuMaximize,
+  LuMinimize,
   LuPause,
+  LuPickaxe,
   LuPlay,
-  LuRefreshCw,
+  LuRotateCcw,
   LuSparkles,
   LuTimer,
   LuTrophy,
+  LuVolume2,
+  LuVolumeX,
+  LuZap,
 } from "react-icons/lu";
 
-import { Link, useParams } from "../components/NextRouter.jsx";
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
+import { Link, useParams } from "../components/NextRouter.jsx";
+import Stars from "../components/Stars.jsx";
+import GhostCatcherGame from "../features/games/GhostCatcherGame.jsx";
+import MinecraftMinerGame from "../features/games/MinecraftMinerGame.jsx";
+import RobloxObbyGame from "../features/games/RobloxObbyGame.jsx";
 import {
-  applyGameAttempt,
-  applyMissedWord,
+  isGameSoundMuted,
+  playGameSound,
+  setGameSoundMuted,
+} from "../features/games/gameAudio.js";
+import {
+  GAME_THEMED_WORDS,
+  MAX_GAME_LEVEL,
+  advanceGameLevel,
   buildGameResultPayload,
   calculateGameAccuracy,
   createGameSession,
-  evaluateGameAttempt,
+  filterWordsForLevel,
   getGameConfig,
-  shuffledItems,
+  getLevelConfig,
 } from "../features/games/gameEngine.js";
-import { playKeyboardSound } from "../features/typing/keyboardSound.js";
 import { getApiErrorMessage } from "../services/api.js";
 import { getLesson } from "../services/lessonService.js";
 import { saveLessonResult } from "../services/resultService.js";
-import { useAuthStore } from "../stores/authStore.js";
-
-const pictures = {
-  en: [
-    ["✏️", "pencil"], ["📘", "book"], ["🎒", "school bag"],
-    ["🍎", "apple"], ["🏫", "school"], ["⌨️", "keyboard"],
-    ["⭐", "star"], ["🐈", "cat"], ["💧", "water"], ["🌳", "tree"],
-  ],
-  km: [
-    ["📘", "សៀវភៅ"], ["🏫", "សាលា"], ["💧", "ទឹក"],
-    ["🌳", "ដើមឈើ"], ["👩‍🏫", "គ្រូ"], ["✏️", "ខ្មៅដៃ"],
-    ["🏠", "ផ្ទះ"], ["🌸", "ផ្កា"], ["🐟", "ត្រី"], ["☀️", "ព្រះអាទិត្យ"],
-  ],
-};
-
-const accentClasses = {
-  sky: "bg-sky-200 text-sky-900 shadow-[0_4px_0_0_#38bdf8]",
-  rose: "bg-rose-200 text-rose-900 shadow-[0_4px_0_0_#fb7185]",
-  amber: "bg-amber-200 text-amber-900 shadow-[0_4px_0_0_#f59e0b]",
-  violet: "bg-violet-200 text-violet-900 shadow-[0_4px_0_0_#8b5cf6]",
-};
 
 function calculateStars(accuracy) {
   if (accuracy >= 95) return 3;
@@ -57,49 +61,110 @@ function calculateStars(accuracy) {
   return 0;
 }
 
-function Hearts({ lives }) {
-  if (lives === null) return null;
-  return (
-    <div className="flex items-center gap-1" aria-label={`${lives} lives left`}>
-      {[1, 2, 3].map((heart) => (
-        <LuHeart
-          className={heart <= lives ? "text-rose-500" : "text-slate-300"}
-          fill={heart <= lives ? "currentColor" : "none"}
-          key={heart}
-          size={20}
-        />
-      ))}
-    </div>
-  );
-}
+const gameVisuals = {
+  "minecraft-miner": LuPickaxe,
+  "roblox-obby": LuCompass,
+  "ghost-catcher": LuGhost,
+};
 
 export default function WordGamePage() {
   const { game, lessonId } = useParams();
   const config = getGameConfig(game);
-  const preferences = useAuthStore((state) => state.user?.preferences);
+
   const [loadState, setLoadState] = useState({ loading: true, lesson: null, error: "" });
   const [status, setStatus] = useState("ready");
   const [session, setSession] = useState(() => createGameSession(config));
   const [finalSession, setFinalSession] = useState(null);
-  const [input, setInput] = useState("");
-  const [remaining, setRemaining] = useState(config?.duration ?? 45);
-  const [fall, setFall] = useState(0);
+  const [difficulty, setDifficulty] = useState("normal"); // casual (75s), normal (60s), speedrun (40s)
+  const [crtMode, setCrtMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [remaining, setRemaining] = useState(config?.duration ?? 60);
   const [feedback, setFeedback] = useState(null);
   const [result, setResult] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const composing = useRef(false);
-  const inputRef = useRef(null);
+  const [soundMuted, setSoundMuted] = useState(() => isGameSoundMuted());
+  const [levelUpCelebration, setLevelUpCelebration] = useState(null);
+
+  const arcadeWrapperRef = useRef(null);
   const sessionRef = useRef(session);
   const startedAtRef = useRef(null);
   const elapsedRef = useRef(0);
   const finishLockRef = useRef(false);
-  const missLockRef = useRef(false);
   const feedbackTimerRef = useRef(null);
+  const levelUpTimerRef = useRef(null);
+
+  const getDifficultyDuration = useCallback(() => {
+    if (difficulty === "casual") return 75;
+    if (difficulty === "speedrun") return 40;
+    return config?.duration ?? 60;
+  }, [config?.duration, difficulty]);
+
+  const enterFullscreen = useCallback(() => {
+    const wrapper = arcadeWrapperRef.current;
+    if (!document.fullscreenElement) {
+      if (wrapper?.requestFullscreen) {
+        wrapper.requestFullscreen().catch(() => {});
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+    setIsFullscreen(true);
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setIsFullscreen(false);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement || isFullscreen) {
+      exitFullscreen();
+    } else {
+      enterFullscreen();
+    }
+  }, [enterFullscreen, exitFullscreen, isFullscreen]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "F11") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+      if (status === "ready" && event.key === "Enter") {
+        event.preventDefault();
+        startGame();
+      }
+      if (event.key === "Escape" && isFullscreen && !document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen, status, toggleFullscreen]);
+
+  useEffect(() => {
+    return () => {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!config) {
-      setLoadState({ loading: false, lesson: null, error: "This typing game does not exist." });
+      setLoadState({ loading: false, lesson: null, error: "This game mode is not available." });
       return undefined;
     }
 
@@ -111,20 +176,30 @@ export default function WordGamePage() {
       .catch((error) => {
         if (active) setLoadState({ loading: false, lesson: null, error: getApiErrorMessage(error) });
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [config, lessonId]);
 
-  const gameItems = useMemo(() => {
-    if (!loadState.lesson) return [];
-    const values = config.id === "picture-typing"
-      ? pictures[loadState.lesson.language]
-      : (loadState.lesson.contentItems ?? []).filter(Boolean).map((word) => ["", word]);
-    return shuffledItems(values);
+  const gameWords = useMemo(() => {
+    if (!loadState.lesson || !config) return [];
+    const themedList = GAME_THEMED_WORDS[config.id]?.[loadState.lesson.language] || [];
+    const lessonList = (loadState.lesson.contentItems ?? []).filter(Boolean);
+    const combined = Array.from(new Set([...themedList, ...lessonList]));
+    return combined.length ? combined : ["typing", "hero", "speed", "quest"];
   }, [config, loadState.lesson]);
 
-  const current = gameItems.length
-    ? gameItems[session.index % gameItems.length]
-    : ["", ""];
+  const currentLevelConfig = useMemo(() => {
+    return getLevelConfig(config?.id, session.level || 1);
+  }, [config?.id, session.level]);
+
+  const activeLevelWords = useMemo(() => {
+    return filterWordsForLevel(
+      gameWords,
+      session.level || 1,
+      loadState.lesson?.language || "en"
+    );
+  }, [gameWords, loadState.lesson?.language, session.level]);
 
   const commitSession = useCallback((next) => {
     sessionRef.current = next;
@@ -137,195 +212,612 @@ export default function WordGamePage() {
     feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 850);
   }, []);
 
-  const persistResult = useCallback(async (snapshot) => {
-    if (!loadState.lesson || !startedAtRef.current) return;
-    setSaving(true);
-    setSaveError("");
-    try {
-      const response = await saveLessonResult(buildGameResultPayload({
-        lesson: loadState.lesson,
-        session: snapshot,
-        startedAt: startedAtRef.current,
-        duration: elapsedRef.current,
-      }));
-      setResult(response.result);
-    } catch (error) {
-      setSaveError(getApiErrorMessage(error));
-    } finally {
-      setSaving(false);
-    }
-  }, [loadState.lesson]);
+  const persistResult = useCallback(
+    async (snapshot) => {
+      if (!loadState.lesson || !startedAtRef.current) return;
+      setSaving(true);
+      setSaveError("");
+      try {
+        const response = await saveLessonResult(
+          buildGameResultPayload({
+            lesson: loadState.lesson,
+            session: snapshot,
+            startedAt: startedAtRef.current,
+            duration: elapsedRef.current,
+          })
+        );
+        setResult(response.result);
+      } catch (error) {
+        setSaveError(getApiErrorMessage(error));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [loadState.lesson]
+  );
 
-  const finishGame = useCallback((snapshot = sessionRef.current) => {
-    if (finishLockRef.current) return;
-    finishLockRef.current = true;
-    setFinalSession(snapshot);
-    setStatus("finished");
-    setInput("");
-    void persistResult(snapshot);
-  }, [persistResult]);
+  const finishGame = useCallback(
+    (snapshot = sessionRef.current) => {
+      if (finishLockRef.current) return;
+      finishLockRef.current = true;
+      setFinalSession(snapshot);
+      setStatus("finished");
+      void persistResult(snapshot);
+    },
+    [persistResult]
+  );
 
+  // Main countdown timer loop
   useEffect(() => {
-    if (status !== "running") return undefined;
+    if (status !== "running" || !config) return undefined;
     let previous = performance.now();
     const timer = window.setInterval(() => {
       const now = performance.now();
       const delta = Math.min((now - previous) / 1000, 0.3);
       previous = now;
       elapsedRef.current += delta;
-      const nextRemaining = Math.max(0, config.duration - elapsedRef.current);
+      const targetDuration = getDifficultyDuration();
+      const nextRemaining = Math.max(0, targetDuration - elapsedRef.current);
       setRemaining(nextRemaining);
       if (nextRemaining <= 0) finishGame(sessionRef.current);
-
-      if (config.id === "falling-words") {
-        const speed = 12 + Math.min(sessionRef.current.correctWords, 12) * 0.65;
-        setFall((value) => Math.min(100, value + delta * speed));
-      }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [config, finishGame, status]);
+  }, [config, finishGame, getDifficultyDuration, status]);
 
-  const handleMiss = useCallback(() => {
-    if (missLockRef.current || status !== "running" || !current[1]) return;
-    missLockRef.current = true;
-    const next = applyMissedWord(sessionRef.current, current[1], loadState.lesson.language);
-    commitSession(next);
-    setFall(0);
-    showFeedback("wrong", `Missed: ${current[1]}`);
-    window.setTimeout(() => { missLockRef.current = false; }, 120);
-    if (next.lives === 0) finishGame(next);
-  }, [commitSession, current, finishGame, loadState.lesson, showFeedback, status]);
+  const handleScore = useCallback(
+    (points = 50, units = 1, isWordCompleted = true) => {
+      const cur = sessionRef.current;
+      const nextStreak = cur.streak + 1;
 
-  useEffect(() => {
-    if (fall >= 100) handleMiss();
-  }, [fall, handleMiss]);
+      if (isWordCompleted) {
+        const levelResult = advanceGameLevel(cur, config?.id);
+        const next = {
+          ...levelResult.session,
+          score: cur.score + points,
+          correctUnits: cur.correctUnits + (units || 1),
+          typedUnits: cur.typedUnits + (units || 1),
+          correctWords: cur.correctWords + 1,
+          totalWords: cur.totalWords + 1,
+          streak: nextStreak,
+          bestStreak: Math.max(cur.bestStreak, nextStreak),
+        };
+        commitSession(next);
+
+        if (levelResult.leveledUp) {
+          playGameSound("level_up", 0.8);
+          setRemaining((prev) => prev + levelResult.timeBonus);
+          setLevelUpCelebration({
+            level: levelResult.newLevel,
+            config: levelResult.levelConfig,
+            timeBonus: levelResult.timeBonus,
+          });
+          window.clearTimeout(levelUpTimerRef.current);
+          levelUpTimerRef.current = window.setTimeout(() => {
+            setLevelUpCelebration(null);
+          }, 2400);
+        } else {
+          showFeedback("correct", nextStreak > 1 ? `${nextStreak}× STREAK!` : `+${points}`);
+        }
+      } else {
+        const next = {
+          ...cur,
+          score: cur.score + points,
+          correctUnits: cur.correctUnits + (units || 1),
+          typedUnits: cur.typedUnits + (units || 1),
+        };
+        commitSession(next);
+      }
+    },
+    [commitSession, config?.id, showFeedback]
+  );
+
+  const handleMiss = useCallback(
+    (missCount = 1) => {
+      const cur = sessionRef.current;
+      const nextLives = cur.lives !== null ? Math.max(0, cur.lives - missCount) : null;
+      const next = {
+        ...cur,
+        incorrectUnits: cur.incorrectUnits + missCount,
+        typedUnits: cur.typedUnits + missCount,
+        streak: 0,
+        lives: nextLives,
+      };
+      commitSession(next);
+      showFeedback("wrong", nextLives === 0 ? "OUT OF HEARTS" : "MISSED");
+      if (nextLives === 0) {
+        finishGame(next);
+      }
+    },
+    [commitSession, finishGame, showFeedback]
+  );
 
   useEffect(() => () => {
     window.clearTimeout(feedbackTimerRef.current);
+    window.clearTimeout(levelUpTimerRef.current);
   }, []);
 
   function startGame() {
+    // Automatically launch game in fullscreen mode on click
+    enterFullscreen();
     const fresh = createGameSession(config);
     commitSession(fresh);
     setFinalSession(null);
     setResult(null);
     setSaveError("");
     setFeedback(null);
-    setInput("");
-    setRemaining(config.duration);
-    setFall(0);
+    setLevelUpCelebration(null);
+    window.clearTimeout(levelUpTimerRef.current);
+    const duration = getDifficultyDuration();
+    setRemaining(duration);
     elapsedRef.current = 0;
     startedAtRef.current = new Date();
     finishLockRef.current = false;
-    missLockRef.current = false;
     setStatus("running");
-    window.requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function togglePause() {
-    setStatus((value) => value === "paused" ? "running" : "paused");
-    window.requestAnimationFrame(() => inputRef.current?.focus());
+    setStatus((value) => (value === "paused" ? "running" : "paused"));
   }
 
-  function submit(value = input) {
-    if (status !== "running" || !current[1] || !value.trim()) return;
-    const attempt = evaluateGameAttempt(
-      current[1],
-      value,
-      loadState.lesson.language,
-    );
-    const next = applyGameAttempt(sessionRef.current, attempt);
-    commitSession(next);
-    setInput("");
-
-    if (attempt.isCorrect) {
-      setFall(0);
-      showFeedback("correct", next.streak > 1 ? `${next.streak}× streak!` : "Perfect!");
-      if (config.id === "picture-typing" && next.correctWords >= gameItems.length) {
-        finishGame(next);
-      }
-    } else {
-      showFeedback("wrong", "Try that word again");
-    }
+  function toggleMute() {
+    const next = !soundMuted;
+    setSoundMuted(next);
+    setGameSoundMuted(next);
   }
 
-  if (loadState.loading) return <PageLoader message="Loading your game…" />;
+  if (loadState.loading) return <PageLoader message="Loading game arcade…" />;
   if (loadState.error) return <PageError message={loadState.error} />;
-  if (!gameItems.length) return <PageError message="This game does not have any words yet. Add game content to the built-in curriculum." />;
+  if (!gameWords.length) {
+    return (
+      <PageError message="This game does not contain words yet. Please select another mode." />
+    );
+  }
 
   const snapshot = finalSession ?? session;
   const accuracy = calculateGameAccuracy(snapshot);
   const stars = result?.stars ?? calculateStars(accuracy);
-  const calculatedSpeed = loadState.lesson.language === "km"
-    ? Math.round(snapshot.correctUnits / Math.max(elapsedRef.current / 60, 1 / 600))
-    : Math.round(snapshot.correctUnits / 5 / Math.max(elapsedRef.current / 60, 1 / 600));
+  const calculatedSpeed =
+    loadState.lesson.language === "km"
+      ? Math.round(snapshot.correctUnits / Math.max(elapsedRef.current / 60, 1 / 600))
+      : Math.round(snapshot.correctUnits / 5 / Math.max(elapsedRef.current / 60, 1 / 600));
   const speed = Math.round(
     loadState.lesson.language === "km"
-      ? (result?.cpm ?? calculatedSpeed)
-      : (result?.wpm ?? calculatedSpeed),
+      ? result?.cpm ?? calculatedSpeed
+      : result?.wpm ?? calculatedSpeed
   );
   const timerPercent = Math.max(0, (remaining / config.duration) * 100);
-
-  if (status === "finished") {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <section className="snp-game-result relative overflow-hidden p-6 text-center sm:p-9">
-          <div className="pointer-events-none absolute left-8 top-8 text-4xl opacity-50">✦</div><div className="pointer-events-none absolute right-10 top-16 text-3xl opacity-40">★</div>
-          <div className="relative">
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-3xl border-2 border-slate-900 bg-emerald-300 text-4xl text-emerald-950 shadow-[0_5px_0_0_#059669]"><LuTrophy /></div>
-            <p className="mt-6 text-xs font-black uppercase tracking-[0.18em] text-primary-600">Round complete</p>
-            <h1 className="mt-2 text-4xl font-black tracking-[-0.04em] text-slate-900">Great typing!</h1>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">You completed {snapshot.correctWords} words with a best streak of {snapshot.bestStreak}.</p>
-            <div className="mt-5 flex justify-center gap-1 text-3xl text-amber-400" aria-label={`${stars} stars`}>{[1, 2, 3].map((star) => <span className={star <= stars ? "" : "text-slate-200"} key={star}>★</span>)}</div>
-
-            <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[["Game score", snapshot.score], ["Accuracy", `${Math.round(accuracy)}%`], [loadState.lesson.language === "km" ? "Speed CPM" : "Speed WPM", speed], ["Best streak", `${snapshot.bestStreak}×`]].map(([label, value]) => <div className="rounded-2xl border-2 border-slate-900 bg-white p-4 shadow-[0_3px_0_0_#cbd5e1]" key={label}><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p><p className="mt-1 text-2xl font-black text-slate-900">{value}</p></div>)}
-            </div>
-
-            {saving && <p className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-slate-500"><span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-primary-600" />Saving score…</p>}
-            {!saving && !saveError && result && <p className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-700"><LuCircleCheckBig />Score saved to your progress</p>}
-            {saveError && <div className="mx-auto mt-5 max-w-lg rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-sm font-bold text-red-700"><p>{saveError}</p><button className="mt-3 inline-flex items-center gap-2 underline" disabled={saving} onClick={() => void persistResult(snapshot)} type="button"><LuRefreshCw />Retry save</button></div>}
-
-            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button className="snp-button-primary" onClick={startGame} type="button"><LuRefreshCw />Play again</button><Link className="snp-button-secondary" to="/games"><LuGamepad2 />Choose another game</Link></div>
-          </div>
-        </section>
-      </div>
-    );
-  }
+  const GameCoverIcon = gameVisuals[config.id] || LuGamepad2;
+  const isTimeUrgent = remaining <= 10;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link className="inline-flex items-center gap-2 text-sm font-black text-primary-700 hover:underline" to="/games"><LuArrowLeft />Back to arcade</Link>
-        <div className="flex items-center gap-3"><Hearts lives={session.lives} />{status !== "ready" && <button className="snp-button-secondary min-h-10 px-4 py-2 text-sm" onClick={togglePause} type="button">{status === "paused" ? <><LuPlay />Resume</> : <><LuPause />Pause</>}</button>}</div>
+    <div
+      ref={arcadeWrapperRef}
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-2 sm:p-4 w-screen h-screen overflow-hidden select-none"
+          : "mx-auto max-w-4xl space-y-4 select-none"
+      }
+    >
+      {/* Top Arcade Navigation & Quick Controls */}
+      <div className="flex items-center justify-between px-2 shrink-0">
+        <Link
+          to="/games"
+          onClick={exitFullscreen}
+          className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+        >
+          <LuArrowLeft size={16} />
+          <span>Exit Arcade</span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          {/* Fullscreen Mode Toggle */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
+              isFullscreen
+                ? "border-emerald-400 bg-emerald-950/80 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
+                : "border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white"
+            }`}
+            title={isFullscreen ? "Exit Fullscreen (Esc / F11)" : "Enter Fullscreen (F11)"}
+          >
+            {isFullscreen ? <LuMinimize size={14} /> : <LuMaximize size={14} />}
+            <span className="hidden sm:inline">{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+          </button>
+
+          {/* Quick Sound Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+            title={soundMuted ? "Unmute Game Audio" : "Mute Game Audio"}
+          >
+            {soundMuted ? <LuVolumeX size={14} className="text-rose-400" /> : <LuVolume2 size={14} className="text-emerald-400" />}
+            <span className="hidden sm:inline">{soundMuted ? "Muted" : "Sound On"}</span>
+          </button>
+
+          {/* Retro CRT Scanline Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => setCrtMode(!crtMode)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
+              crtMode
+                ? "border-cyan-400 bg-cyan-950/80 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
+                : "border-slate-700 bg-slate-900/80 text-slate-400 hover:text-white"
+            }`}
+            title="Toggle Retro CRT Scanlines"
+          >
+            <span>CRT Mode</span>
+            <span className={`w-2 h-2 rounded-full ${crtMode ? "bg-cyan-400 animate-ping" : "bg-slate-600"}`} />
+          </button>
+
+          {status === "running" && (
+            <>
+              <button
+                type="button"
+                onClick={togglePause}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                <LuPause size={13} />
+                <span>Pause</span>
+              </button>
+              <button
+                type="button"
+                onClick={startGame}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-900/50 bg-rose-950/40 text-xs font-bold text-rose-400 hover:text-rose-300 transition cursor-pointer"
+              >
+                <LuRotateCcw size={13} />
+                <span>Restart</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">{loadState.lesson.language === "km" ? "Khmer typing game" : "English typing game"}</p><h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">{config.title}</h1><p className="mt-2 text-sm font-medium text-slate-500">{config.instruction}</p></div>
-        <div className="flex gap-2"><div className="snp-game-stat"><LuTrophy className="text-amber-500" /><span><small>Score</small><b>{session.score}</b></span></div><div className="snp-game-stat"><LuSparkles className="text-violet-500" /><span><small>Streak</small><b>{session.streak}×</b></span></div><div className="snp-game-stat"><LuTimer className="text-sky-500" /><span><small>Time</small><b>{Math.ceil(remaining)}s</b></span></div></div>
-      </header>
+      {status === "finished" ? (
+        <div className="mx-auto max-w-2xl py-6 select-none my-auto w-full">
+          <Card
+            variant="outlined"
+            className="rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5),0_6px_0_0_#0f172a] text-center p-6 sm:p-10 border-4 border-slate-900 dark:border-slate-700 bg-slate-900/95 text-white"
+          >
+            <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl bg-amber-500/20 text-5xl text-amber-400 mb-4 border-2 border-amber-400/40 shadow-[0_0_24px_rgba(251,191,36,0.5)] animate-bounce">
+              <LuTrophy size={48} />
+            </div>
 
-      <div className="h-3 overflow-hidden rounded-full border-2 border-slate-900 bg-white shadow-[0_2px_0_0_#cbd5e1]" aria-label={`${Math.ceil(remaining)} seconds remaining`} role="progressbar" aria-valuemax={config.duration} aria-valuemin="0" aria-valuenow={Math.ceil(remaining)}><div className="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-violet-500 transition-[width] duration-100" style={{ width: `${timerPercent}%` }} /></div>
+            <Tag color="gold" className="font-black uppercase tracking-wider rounded-lg px-3 py-0.5 text-xs">
+              ROUND COMPLETE
+            </Tag>
+            <h2 className="m-0 mt-3 text-3xl sm:text-4xl font-black text-white">
+              Awesome Typing!
+            </h2>
+            <p className="m-0 mt-2 text-sm text-slate-300">
+              {config.title} · {loadState.lesson.language === "km" ? "Khmer NIDA Track" : "English Track"}
+            </p>
 
-      <section className="snp-game-stage relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.055]" style={{ backgroundImage: "linear-gradient(#172033 1px, transparent 1px), linear-gradient(90deg, #172033 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+              <Tag color="purple" className="font-black uppercase tracking-wider rounded-lg px-3 py-1 text-xs flex items-center gap-1.5">
+                <LuTrophy size={14} className="text-amber-400" />
+                <span>Highest Stage: Level {snapshot.level || 1} / {snapshot.maxLevel || 5}</span>
+              </Tag>
+              {(snapshot.levelUps || 0) > 0 && (
+                <Tag color="cyan" className="font-black uppercase tracking-wider rounded-lg px-3 py-1 text-xs flex items-center gap-1.5">
+                  <LuSparkles size={14} className="text-cyan-300" />
+                  <span>{snapshot.levelUps} Stage Upgrades</span>
+                </Tag>
+              )}
+            </div>
 
-        {status === "ready" && <div className="absolute inset-0 z-20 grid place-items-center bg-white/80 p-5 text-center backdrop-blur-sm"><div className="max-w-md"><div className={`mx-auto grid h-20 w-20 place-items-center rounded-3xl border-2 border-slate-900 text-4xl ${accentClasses[config.accent]}`}>{config.icon}</div><h2 className="mt-6 text-3xl font-black tracking-tight">Ready to play?</h2><p className="mt-3 text-sm leading-6 text-slate-600">{config.description} You have {config.duration} seconds.</p><button className="snp-button-primary mt-6 min-w-48" onClick={startGame} type="button"><LuPlay fill="currentColor" />Start game</button></div></div>}
-        {status === "paused" && <div className="absolute inset-0 z-20 grid place-items-center bg-slate-950/70 p-5 text-center text-white backdrop-blur-sm"><div><LuPause className="mx-auto" size={48} /><h2 className="mt-4 text-3xl font-black">Game paused</h2><p className="mt-2 text-slate-300">Your timer and falling word are frozen.</p><button className="snp-button-primary mt-6" onClick={togglePause} type="button"><LuPlay />Keep playing</button></div></div>}
+            <div className="my-6 flex justify-center scale-125">
+              <Stars count={stars} />
+            </div>
 
-        {config.id === "falling-words" && <><div className="absolute inset-x-8 bottom-14 border-t-4 border-dashed border-rose-300"><span className="absolute -top-8 right-0 text-xs font-black uppercase tracking-wider text-rose-500">Danger zone</span></div><div className="snp-falling-word absolute left-1/2 z-10 -translate-x-1/2" style={{ top: `${Math.min(82, fall)}%` }}>{current[1]}</div></>}
-        {config.id === "balloon-typing" && <div className="absolute inset-0 grid place-items-center"><div className="snp-game-balloon"><span>{current[1]}</span><i /></div></div>}
-        {config.id === "picture-typing" && <div className="absolute inset-0 grid place-items-center text-center"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">What is this?</p><div className="mt-3 text-8xl drop-shadow-lg sm:text-9xl">{current[0]}</div><p className="mt-4 text-sm font-bold text-slate-500">Picture {Math.min(session.correctWords + 1, gameItems.length)} of {gameItems.length}</p></div></div>}
-        {config.id === "speed-challenge" && <div className="absolute inset-0 grid place-items-center text-center"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Type this word</p><div className="mt-4 rounded-3xl border-2 border-slate-900 bg-violet-200 px-8 py-5 text-4xl font-black text-violet-950 shadow-[0_6px_0_0_#8b5cf6] sm:text-6xl">{current[1]}</div><p className="mt-6 text-xs font-bold text-slate-400">Next: {gameItems[(session.index + 1) % gameItems.length][1]}</p></div></div>}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-6 text-left">
+              <div className="rounded-2xl border-2 border-slate-800 p-4 bg-slate-950/80 shadow-md">
+                <p className="m-0 text-xs font-bold text-slate-400 uppercase">Score</p>
+                <p className="m-0 text-2xl font-black text-[#52c41a]">{snapshot.score}</p>
+              </div>
+              <div className="rounded-2xl border-2 border-slate-800 p-4 bg-slate-950/80 shadow-md">
+                <p className="m-0 text-xs font-bold text-slate-400 uppercase">Speed</p>
+                <p className="m-0 text-2xl font-black text-white">
+                  {speed} <span className="text-xs font-bold text-slate-400">{loadState.lesson.language === "km" ? "CPM" : "WPM"}</span>
+                </p>
+              </div>
+              <div className="rounded-2xl border-2 border-slate-800 p-4 bg-slate-950/80 shadow-md">
+                <p className="m-0 text-xs font-bold text-slate-400 uppercase">Accuracy</p>
+                <p className="m-0 text-2xl font-black text-sky-400">{Math.round(accuracy)}%</p>
+              </div>
+              <div className="rounded-2xl border-2 border-slate-800 p-4 bg-slate-950/80 shadow-md">
+                <p className="m-0 text-xs font-bold text-slate-400 uppercase">Best Streak</p>
+                <p className="m-0 text-2xl font-black text-amber-400">{snapshot.bestStreak}×</p>
+              </div>
+            </div>
 
-        {feedback && <div className={`absolute left-1/2 top-5 z-30 -translate-x-1/2 rounded-full border-2 border-slate-900 px-5 py-2 text-sm font-black shadow-[0_3px_0_0_#172033] ${feedback.type === "correct" ? "bg-emerald-300 text-emerald-950" : "bg-rose-200 text-rose-950"}`} role="status">{feedback.type === "correct" ? "✓" : "×"} {feedback.message}</div>}
-      </section>
+            {saveError && (
+              <Alert title="Sync Notice" description={saveError} type="warning" showIcon className="mb-6 rounded-xl text-left" />
+            )}
 
-      <form className="snp-card p-4 sm:p-5" onSubmit={(event) => { event.preventDefault(); submit(); }}>
-        <label className="snp-label" htmlFor="game-answer">Type the answer and press Enter</label>
-        <div className="flex flex-col gap-3 sm:flex-row"><input ref={inputRef} autoComplete="off" autoCorrect="off" className={`snp-input min-h-14 flex-1 text-center text-xl font-black ${loadState.lesson.language === "km" ? "font-sans" : "tracking-wide"}`} disabled={status !== "running"} id="game-answer" lang={loadState.lesson.language} onChange={(event) => { const value = event.target.value; setInput(value); if (loadState.lesson.language === "en" && !composing.current && !current[1].includes(" ") && value.endsWith(" ")) submit(value); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={(event) => playKeyboardSound({ enabled: preferences?.soundEnabled ?? true, key: event.key, style: preferences?.soundStyle ?? "soft", volume: preferences?.soundVolume ?? 0.35 })} placeholder={status === "ready" ? "Press Start to begin" : status === "paused" ? "Game paused" : "Type here…"} spellCheck="false" value={input} /><button className="snp-button-primary min-w-32" disabled={status !== "running" || !input.trim()} type="submit">Submit <span aria-hidden="true">↵</span></button></div>
-        <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs font-bold text-slate-500"><span>Words: <b className="text-slate-800">{session.correctWords}</b></span><span>Accuracy: <b className="text-slate-800">{Math.round(calculateGameAccuracy(session))}%</b></span><span>Errors: <b className="text-slate-800">{session.errors}</b></span><span>Best streak: <b className="text-slate-800">{session.bestStreak}×</b></span></div>
-      </form>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button
+                type="primary"
+                size="large"
+                icon={<LuRotateCcw size={18} />}
+                onClick={startGame}
+                className="font-black px-8 h-12 rounded-xl text-base shadow-[0_4px_0_0_#15803d]"
+              >
+                Play Again
+              </Button>
+              <Link to="/games" onClick={exitFullscreen}>
+                <Button size="large" className="font-bold px-6 h-12 rounded-xl text-base bg-slate-800 text-white border-slate-700">
+                  Back to Arcade
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        /* Deluxe Neo-Brutalist Arcade Machine Chassis */
+        <div
+          className={`relative rounded-3xl border-4 border-slate-900 dark:border-slate-700 bg-slate-950 shadow-[0_20px_45px_rgba(0,0,0,0.5),0_8px_0_0_#0f172a] overflow-hidden flex flex-col ${
+            isFullscreen ? "flex-1 h-full max-h-screen" : ""
+          }`}
+        >
+        {/* Top Arcade Marquee & Digital HUD */}
+        <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border-b-2 border-slate-800 text-white">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+            <span className="font-black text-sm tracking-wider uppercase text-white flex items-center gap-1.5">
+              <LuGamepad2 className="text-cyan-400" size={16} />
+              <span>{config.title}</span>
+            </span>
+            <Tag color="cyan" className="font-bold text-[10px] uppercase rounded-md m-0">
+              {loadState.lesson.language === "km" ? "Khmer NIDA Track" : "English QWERTY"}
+            </Tag>
+
+            {/* Level & Stage Progress Indicator */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-violet-950/80 border border-violet-500/40 text-violet-200">
+              <LuTrophy className="text-amber-400" size={13} />
+              <span className="font-black text-xs text-white">
+                LVL {session.level || 1}/{session.maxLevel || 5}
+              </span>
+              <span className="text-[10px] text-violet-300 font-bold hidden md:inline">
+                ({currentLevelConfig?.title || "Stage"})
+              </span>
+              <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/10 px-1.5 py-0.5 rounded-md">
+                {session.levelWordsCompleted || 0}/{session.levelWordsTarget || 3}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Countdown Clock with Color Urgency */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono font-black text-xs border ${
+                isTimeUrgent
+                  ? "border-rose-500 bg-rose-950/80 text-rose-300 animate-pulse"
+                  : remaining <= 20
+                  ? "border-amber-500 bg-amber-950/80 text-amber-300"
+                  : "border-slate-700 bg-slate-900/80 text-emerald-300"
+              }`}
+            >
+              <LuTimer size={14} />
+              <span>{Math.ceil(remaining)}s</span>
+            </div>
+
+            {/* Streak Multiplier */}
+            {session.streak > 1 && (
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-black animate-pulse">
+                <LuFlame size={14} className="text-amber-400" />
+                <span>{session.streak}×</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Segmented Timer Progress Bar */}
+        <div className="w-full bg-slate-900 h-2">
+          <div
+            className={`h-full transition-all duration-200 ${
+              isTimeUrgent ? "bg-rose-500" : remaining <= 20 ? "bg-amber-500" : "bg-emerald-500"
+            }`}
+            style={{ width: `${timerPercent}%` }}
+          />
+        </div>
+
+        {/* Main Interactive Game Arena */}
+        <div className={`relative ${isFullscreen ? "flex-1 h-full flex flex-col min-h-[500px]" : ""}`}>
+          {/* Retro CRT Scanline Shader Overlay */}
+          {crtMode && (
+            <div className="absolute inset-0 pointer-events-none z-30 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%)] bg-[length:100%_4px] opacity-45 mix-blend-overlay" />
+          )}
+
+          {/* Level Up Celebration Fullscreen Overlay */}
+          {levelUpCelebration && (
+            <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/85 backdrop-blur-md p-6 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+              <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-amber-400 shadow-[0_0_60px_rgba(251,191,36,0.6)] text-center text-white">
+                <div className="mx-auto w-20 h-20 rounded-2xl bg-amber-400/20 border-2 border-amber-400/60 flex items-center justify-center text-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)] animate-bounce mb-3">
+                  <LuTrophy size={42} />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 font-black text-xs uppercase tracking-widest mb-2">
+                  <LuSparkles size={14} />
+                  <span>STAGE UNLOCKED</span>
+                  <LuSparkles size={14} />
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider m-0">
+                  LEVEL {levelUpCelebration.level} REACHED!
+                </h2>
+
+                <p className="text-base font-black text-cyan-300 mt-1 mb-2">
+                  {levelUpCelebration.config?.title}
+                </p>
+
+                <p className="text-xs text-slate-300 m-0 mb-4 max-w-xs mx-auto">
+                  {levelUpCelebration.config?.description}
+                </p>
+
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-mono font-black text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                  <LuZap size={16} />
+                  <span>+{levelUpCelebration.timeBonus}s Arcade Bonus Added!</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Game Ready Title Screen Overlay */}
+          {status === "ready" && (
+            <div className="absolute inset-0 z-40 grid place-items-center bg-slate-950/90 p-6 text-center backdrop-blur-md">
+              <div className="max-w-md text-white">
+                <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl bg-gradient-to-tr from-cyan-600 to-emerald-500 text-white mb-4 shadow-[0_0_30px_rgba(6,182,212,0.6)] border-2 border-white/20 animate-bounce">
+                  <GameCoverIcon size={48} />
+                </div>
+                <h3 className="m-0 text-3xl font-black text-white tracking-wide uppercase">
+                  {config.title}
+                </h3>
+                <p className="m-0 mt-2 text-sm text-slate-300 leading-relaxed">
+                  {config.description} You have <b>{getDifficultyDuration()} seconds</b> on the arcade clock.
+                </p>
+
+                {/* Difficulty Mode Selector */}
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {[
+                    ["casual", "Casual · 75s", "border-emerald-500 text-emerald-300"],
+                    ["normal", "Standard · 60s", "border-cyan-500 text-cyan-300"],
+                    ["speedrun", "Speedrun · 40s", "border-rose-500 text-rose-300"],
+                  ].map(([mode, label, colorClass]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setDifficulty(mode);
+                        const dur = mode === "casual" ? 75 : mode === "speedrun" ? 40 : 60;
+                        setRemaining(dur);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                        difficulty === mode
+                          ? `bg-slate-900 shadow-md ${colorClass} ring-2 ring-white/30 scale-105`
+                          : "border-slate-800 text-slate-400 bg-slate-950/60 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-cyan-300">
+                  <LuSparkles size={14} />
+                  <span>Direct physical keyboard control · Auto full-screen mode (F11 to toggle)</span>
+                </div>
+
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<LuPlay size={20} />}
+                  onClick={startGame}
+                  className="mt-6 font-black px-10 h-14 rounded-2xl text-lg shadow-[0_6px_0_0_#15803d]"
+                >
+                  START GAME
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Game Paused Overlay */}
+          {status === "paused" && (
+            <div className="absolute inset-0 z-40 grid place-items-center bg-slate-950/90 p-6 text-center text-white backdrop-blur-md">
+              <div>
+                <LuPause className="mx-auto text-amber-400 mb-3 animate-pulse" size={54} />
+                <h3 className="m-0 text-3xl font-black text-white uppercase tracking-wider">Game Paused</h3>
+                <p className="m-0 mt-1 text-sm text-slate-300">Countdown timer and animations frozen.</p>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<LuPlay size={18} />}
+                  onClick={togglePause}
+                  className="mt-6 font-black px-8 h-12 rounded-xl text-base shadow-[0_4px_0_0_#15803d]"
+                >
+                  RESUME GAME
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Render Active Distinct Kid Game Viewport */}
+          {config.id === "minecraft-miner" && (
+            <MinecraftMinerGame
+              isFullscreen={isFullscreen}
+              language={loadState.lesson.language}
+              onMiss={handleMiss}
+              onScore={handleScore}
+              session={session}
+              status={status}
+              words={activeLevelWords}
+            />
+          )}
+
+          {config.id === "roblox-obby" && (
+            <RobloxObbyGame
+              isFullscreen={isFullscreen}
+              language={loadState.lesson.language}
+              onMiss={handleMiss}
+              onScore={handleScore}
+              session={session}
+              status={status}
+              words={activeLevelWords}
+            />
+          )}
+
+          {config.id === "ghost-catcher" && (
+            <GhostCatcherGame
+              isFullscreen={isFullscreen}
+              language={loadState.lesson.language}
+              onMiss={handleMiss}
+              onScore={handleScore}
+              session={session}
+              status={status}
+              words={activeLevelWords}
+            />
+          )}
+        </div>
+
+        {/* Floating Feedback Toast */}
+        {feedback && (
+          <div className="absolute top-16 inset-x-0 z-30 flex justify-center pointer-events-none">
+            <div
+              className={`px-6 py-2 rounded-2xl text-sm font-black shadow-2xl animate-bounce tracking-wide uppercase ${
+                feedback.type === "correct"
+                  ? "bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-emerald-300"
+                  : "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.8)] border border-rose-300"
+              }`}
+            >
+              {feedback.message}
+            </div>
+          </div>
+        )}
+
+        {/* Integrated Arcade Deck Console (Direct Keyboard Mode) */}
+        {status === "running" && (
+          <div className="px-5 py-3.5 bg-slate-900 border-t-2 border-slate-800 flex items-center justify-between text-xs font-bold text-slate-400">
+            <div className="flex items-center gap-2 text-cyan-400">
+              <LuKeyboard size={16} />
+              <span className="font-black tracking-wide">
+                Direct Keyboard Active · Type letters to play
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span>
+                Track: <b className="text-white">{loadState.lesson.language === "km" ? "Khmer NIDA" : "English QWERTY"}</b>
+              </span>
+              <span className="hidden sm:inline text-slate-500">|</span>
+              <span className="hidden sm:inline">
+                Streak: <b className="text-amber-400">{session.streak}×</b>
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
     </div>
   );
 }

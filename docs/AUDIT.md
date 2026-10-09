@@ -17,7 +17,7 @@ SNP Typing is now a learner-only application. Staff navigation, role guards, tea
 | Timed tests | Complete | English and Khmer support 30 seconds, 1 minute, 3 minutes, and 5 minutes. |
 | Typing games | Complete | Falling Words, Balloon Typing, Picture Typing, and Speed Challenge save results. |
 | Computer Skills | Complete | Safe document-formatting simulations unlock sequentially. |
-| Progress | Complete | Completion, speed, accuracy, time, stars, streak, recent activity, and weekly activity are personal. |
+| Progress | Complete | English, Khmer, and Computer Skills completion plus speed, accuracy, time, stars, streak, recent activity, and weekly activity are personal. |
 | A4 report | Complete | The learner can print or save a one-page identity and progress report. |
 | Leaderboard | Complete | Today, week, month, and all-time rankings are universal; no class filter exists. |
 | Settings | Complete | Sound, volume, virtual keyboard, hand guide, text size, and theme are learner-owned. |
@@ -39,7 +39,7 @@ SNP Typing is now a learner-only application. Staff navigation, role guards, tea
 
 | Area | Status | Verification |
 | --- | --- | --- |
-| Authentication | Complete | Self-registration, bcrypt, short-lived access JWTs, rotating refresh tokens, browser cookies, and Electron encrypted storage. |
+| Authentication | Complete | Self-registration, hashed recovery answers with session revocation, bcrypt passwords, short-lived access JWTs, rotating refresh tokens, browser cookies, and Electron encrypted storage. |
 | Learner isolation | Complete | Result listing and progress always scope to the authenticated learner. |
 | Curriculum reads | Complete | Authenticated learners can list and read published activities; mutation routes are absent. |
 | Personal settings | Complete | `/settings/me` updates only the authenticated account. |
@@ -51,13 +51,13 @@ SNP Typing is now a learner-only application. Staff navigation, role guards, tea
 | Curriculum | Count |
 | --- | ---: |
 | English core | 100 |
-| Khmer core | 74 |
+| Khmer core | 94 |
 | Computer Skills | 20 |
-| Core curriculum | 194 |
+| Core curriculum | 214 |
 | Tests, practice templates, and games | 18 |
-| All seeded activities | 212 |
+| All seeded activities | 232 |
 
-Twenty-six source-dependent records remain unpublished with `contentStatus: "needs_review"`. The requested PDF is not present, so exact page text and ambiguous Khmer sequences have not been claimed as verified.
+All 232 seeded activities (including all 26 source-dependent lessons from `សៀវភៅ Microsoft Word សម្រាប់កុមារអាយុ៦-១២ឆ្នាំ.pdf`) are visually verified against the source pages, approved, and published (`reviewStatus: "approved"`, `isPublished: true`).
 
 ## Release verification
 

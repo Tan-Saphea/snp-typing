@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./src/**/*.{js,jsx}"],
   theme: {
     extend: {
@@ -17,10 +18,7 @@ export default {
       },
       fontFamily: {
         sans: [
-          "Inter",
-          "Noto Sans Khmer",
-          "Khmer OS Battambang",
-          "Segoe UI",
+          "Google Sans",
           "sans-serif"
         ]
       },

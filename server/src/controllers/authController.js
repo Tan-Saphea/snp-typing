@@ -61,6 +61,23 @@ export const register = asyncHandler(async (request, response) => {
   response.status(201).json({ data: sessionPayload(request, session) });
 });
 
+export const findUsername = asyncHandler(async (request, response) => {
+  const users = await authService.findUsername(request.validated.body);
+  response.status(200).json({ data: users });
+});
+
+export const verifyAccount = asyncHandler(async (request, response) => {
+  const info = await authService.getAccountVerificationInfo(
+    request.validated.body.username,
+  );
+  response.status(200).json({ data: info });
+});
+
+export const resetPassword = asyncHandler(async (request, response) => {
+  const result = await authService.resetPassword(request.validated.body);
+  response.status(200).json({ data: result });
+});
+
 export const refresh = asyncHandler(async (request, response) => {
   const refreshToken = readRefreshToken(request);
 

@@ -71,13 +71,33 @@ export async function login({ username, password }, requestContext) {
   return createSession(user, requestContext);
 }
 
+const REQUIRED_RECOVERY_KEY = "Admin.snpis@2013";
+
 export async function register(data, requestContext) {
-  const username = data.username.toLowerCase();
+  const providedRecoveryKey = (data.securityAnswer || "").trim();
+  if (
+    providedRecoveryKey !== REQUIRED_RECOVERY_KEY &&
+    providedRecoveryKey.toLowerCase() !== REQUIRED_RECOVERY_KEY.toLowerCase()
+  ) {
+    throw new ApiError(
+      400,
+      "INVALID_RECOVERY_KEY",
+      "Recovery Key មិនត្រឹមត្រូវទេ! សូមទាក់ទងលោកគ្រូ ឬអ្នកគ្រូ។ (The recovery key is incorrect. Please contact your instructor.)",
+    );
+  }
+
+  const username = data.username.toLowerCase().trim();
   const existingUser = await User.exists({ username });
 
   if (existingUser) {
     throw new ApiError(409, "USERNAME_TAKEN", "That username is already in use. Choose another one.");
   }
+
+  const rawName = (data.name || data.firstName || "").trim();
+  const isKhmer = /[\u1780-\u17FF]/.test(rawName);
+  const firstName = rawName || "Learner";
+  const lastName = data.lastName ? data.lastName.trim() : "";
+  const khmerName = data.khmerName ? data.khmerName.trim() : (isKhmer ? rawName : "");
 
   const passwordHash = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
   let user;
@@ -86,10 +106,15 @@ export async function register(data, requestContext) {
     user = await User.create({
       username,
       passwordHash,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      khmerName: data.khmerName,
-      gender: data.gender,
+      firstName,
+      lastName,
+      khmerName,
+      gender: data.gender || "unspecified",
+      securityQuestion: (data.securityQuestion && data.securityQuestion.trim()) || "Recovery Key",
+      securityAnswer: await bcrypt.hash(
+        data.securityAnswer.trim().toLowerCase(),
+        env.BCRYPT_ROUNDS,
+      ),
       status: "active",
       lastLoginAt: new Date(),
     });
@@ -101,6 +126,106 @@ export async function register(data, requestContext) {
   }
 
   return createSession(user, requestContext);
+}
+
+export async function findUsername(criteria = {}) {
+  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const orConditions = [];
+
+  const searchText = (criteria.query || criteria.firstName || criteria.name || "").trim();
+  if (searchText) {
+    const reg = new RegExp(escapeRegex(searchText), "i");
+    orConditions.push({ username: reg });
+    orConditions.push({ firstName: reg });
+    orConditions.push({ lastName: reg });
+    orConditions.push({ khmerName: reg });
+  }
+  if (criteria.khmerName && criteria.khmerName.trim()) {
+    orConditions.push({ khmerName: new RegExp(escapeRegex(criteria.khmerName.trim()), "i") });
+  }
+  if (criteria.lastName && criteria.lastName.trim()) {
+    orConditions.push({ lastName: new RegExp(escapeRegex(criteria.lastName.trim()), "i") });
+  }
+
+  if (orConditions.length === 0) {
+    throw new ApiError(400, "MISSING_CRITERIA", "Please enter a name or username to search.");
+  }
+
+  const matches = await User.find({
+    status: "active",
+    $or: orConditions,
+  })
+    .select("username firstName lastName khmerName")
+    .limit(10);
+
+  return matches.map((u) => ({
+    username: u.username,
+    firstName: u.firstName,
+    lastName: u.lastName || "",
+    khmerName: u.khmerName || "",
+  }));
+}
+
+export async function getAccountVerificationInfo(username) {
+  const user = await User.findOne({
+    username: username.toLowerCase().trim(),
+    status: "active",
+  }).select("username firstName securityQuestion");
+
+  if (!user) {
+    throw new ApiError(404, "USER_NOT_FOUND", "No active account found with this username.");
+  }
+
+  return {
+    username: user.username,
+    firstName: user.firstName,
+    securityQuestion: user.securityQuestion || "Recovery Key",
+    hasSecurityQuestion: Boolean(user.securityAnswer?.trim() || user.securityQuestion?.trim()),
+  };
+}
+
+export async function resetPassword({ username, newPassword, securityAnswer }) {
+  const user = await User.findOne({
+    username: username.toLowerCase().trim(),
+    status: "active",
+  }).select("+passwordHash +securityAnswer");
+
+  if (!user) {
+    throw new ApiError(404, "USER_NOT_FOUND", "No active account found with this username.");
+  }
+
+  if (!user.securityAnswer?.trim()) {
+    throw new ApiError(
+      409,
+      "RECOVERY_NOT_CONFIGURED",
+      "Password recovery is not configured for this account.",
+    );
+  }
+
+  const storedAnswer = user.securityAnswer.trim();
+  const providedAnswer = securityAnswer.trim().toLowerCase();
+  const answerMatches = storedAnswer.startsWith("$2")
+    ? await bcrypt.compare(providedAnswer, storedAnswer)
+    : storedAnswer.toLowerCase() === providedAnswer;
+
+  if (!answerMatches) {
+    throw new ApiError(
+      400,
+      "SECURITY_ANSWER_INCORRECT",
+      "The recovery key is incorrect (ពាក្យគន្លឹះសង្គ្រោះគណនីមិនត្រឹមត្រូវទេ)។",
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
+  user.passwordHash = passwordHash;
+  user.passwordChangedAt = new Date();
+  await user.save();
+
+  await revokeAllUserSessions(user.id);
+
+  return {
+    message: "Password reset successfully. Please sign in with your new password.",
+  };
 }
 
 export async function refresh(refreshToken, requestContext) {

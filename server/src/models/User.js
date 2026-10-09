@@ -5,13 +5,14 @@ import mongoose from "mongoose";
 const preferencesSchema = new mongoose.Schema(
   {
     soundEnabled: { type: Boolean, default: true },
-    soundStyle: { type: String, enum: ["soft", "typewriter", "bubble"], default: "soft" },
+    soundStyle: { type: String, enum: ["soft", "thock", "mechanical", "typewriter", "bubble"], default: "soft" },
     soundVolume: { type: Number, min: 0, max: 1, default: 0.35 },
     virtualKeyboard: { type: Boolean, default: true },
     handGuide: { type: Boolean, default: true },
     keyboardLayout: { type: String, enum: ["en", "km"], default: "en" },
     fontSize: { type: String, enum: ["normal", "large"], default: "normal" },
     theme: { type: String, enum: ["light", "dark", "system"], default: "light" },
+    superGuest: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -48,6 +49,8 @@ const userSchema = new mongoose.Schema(
       default: "active",
       index: true,
     },
+    securityQuestion: { type: String, trim: true, default: "" },
+    securityAnswer: { type: String, trim: true, default: "", select: false },
     preferences: { type: preferencesSchema, default: () => ({}) },
     lastLoginAt: { type: Date },
     passwordChangedAt: { type: Date },
@@ -60,6 +63,7 @@ const userSchema = new mongoose.Schema(
         delete value._id;
         delete value.__v;
         delete value.passwordHash;
+        delete value.securityAnswer;
         return value;
       },
     },

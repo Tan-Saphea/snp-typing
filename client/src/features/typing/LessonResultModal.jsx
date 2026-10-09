@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
-import { LuArrowRight, LuBookOpen, LuCircleCheckBig, LuRefreshCw, LuRotateCcw, LuTriangleAlert } from "react-icons/lu";
+import { Alert, Button, Card, Modal, Radio, Rate, Result, Space, Spin, Tag, Typography } from "antd";
+import {
+  LuArrowRight,
+  LuBookOpen,
+  LuCircleCheckBig,
+  LuRefreshCw,
+  LuRotateCcw,
+  LuTriangleAlert,
+} from "react-icons/lu";
 
 import Stars from "../../components/Stars.jsx";
+
+const { Text, Title } = Typography;
 
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
@@ -9,25 +19,206 @@ function formatTime(seconds) {
   return `${minutes}:${remaining}`;
 }
 
-export default function LessonResultModal({ result, saving, saveError, onRetrySave, onTryAgain, onNext, onBack, hasNext, comprehension }) {
+export default function LessonResultModal({
+  result,
+  saving,
+  saveError,
+  onRetrySave,
+  onTryAgain,
+  onNext,
+  onBack,
+  hasNext,
+  comprehension,
+}) {
   const [selectedAnswer, setSelectedAnswer] = useState("");
-  useEffect(() => { setSelectedAnswer(""); }, [result?.id]);
 
-  if (saving) return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" role="status"><div className="snp-result-dialog w-full max-w-md p-7 text-center sm:p-8"><div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-primary-100 border-t-primary-600" /><h2 className="mt-5 text-xl font-black">Saving your result…</h2><p className="mt-2 text-sm text-slate-500">Keeping your progress safe.</p></div></div>;
-  if (saveError) return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm" role="alert"><div className="snp-result-dialog w-full max-w-md p-7 text-center sm:p-8"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border-2 border-red-700 bg-red-100 text-xl text-red-700 shadow-[0_4px_0_0_#fca5a5]"><LuTriangleAlert /></div><h2 className="mt-5 text-2xl font-black">Result not saved</h2><p className="mt-2 text-slate-600">{saveError}</p><button className="snp-button-primary mt-6 w-full" onClick={onRetrySave} type="button"><LuRefreshCw />Try saving again</button></div></div>;
+  useEffect(() => {
+    setSelectedAnswer("");
+  }, [result?.id]);
+
+  if (saving) {
+    return (
+      <Modal open centered footer={null} closable={false} width={380}>
+        <div className="py-8 text-center">
+          <Spin size="large" />
+          <h3 className="m-0 mt-4 text-lg font-black text-slate-800 dark:text-slate-200">
+            Saving your result…
+          </h3>
+          <p className="m-0 mt-1 text-xs text-slate-400">
+            Syncing progress to your learner account.
+          </p>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (saveError) {
+    return (
+      <Modal open centered footer={null} closable={false} width={420}>
+        <div className="p-4 text-center">
+          <Result
+            status="error"
+            title={<span className="font-black text-xl">Result Not Saved</span>}
+            subTitle={<span className="text-sm text-slate-500">{saveError}</span>}
+            extra={
+              <Button
+                type="primary"
+                icon={<LuRefreshCw size={14} />}
+                onClick={onRetrySave}
+                className="font-bold px-6"
+              >
+                Retry Saving
+              </Button>
+            }
+          />
+        </div>
+      </Modal>
+    );
+  }
+
   if (!result) return null;
 
   const passed = result.passed;
-  const continueDisabled = !passed || !hasNext || Boolean(comprehension?.question && !selectedAnswer);
+  const continueDisabled =
+    !passed || !hasNext || Boolean(comprehension?.question && !selectedAnswer);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-labelledby="result-heading">
-      <div className="snp-result-dialog snp-scrollbar max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto p-5 sm:max-h-[calc(100vh-2.5rem)] sm:p-7">
-        <div className="text-center"><div className={`mx-auto grid h-16 w-16 place-items-center rounded-3xl border-2 border-slate-900 text-3xl ${passed ? "bg-emerald-200 text-emerald-800 shadow-[0_5px_0_0_#10b981]" : "bg-amber-200 text-amber-800 shadow-[0_5px_0_0_#f59e0b]"}`}>{passed ? <LuCircleCheckBig /> : <LuRotateCcw />}</div><p className="mt-6 text-xs font-black uppercase tracking-[0.15em] text-primary-600">{passed ? "Mission complete" : "Practice round"}</p><h2 className="mt-2 text-2xl font-black sm:text-3xl" id="result-heading">{passed ? "Great job!" : "Keep practicing!"}</h2><p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">{passed ? "Lesson complete. Your focused practice is paying off." : "Aim for at least 70% accuracy, then try again."}</p><p className="mt-3"><Stars count={result.stars} size={28} /></p></div>
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">{[["WPM", Math.round(result.wpm)], ["CPM", Math.round(result.cpm)], ["Accuracy", `${Math.round(result.accuracy)}%`], ["Errors", result.errors], ["Time", formatTime(result.duration)], ["Score", result.score]].map(([label, value]) => <div className="rounded-xl border-2 border-slate-900 bg-slate-50 p-3 text-center shadow-[0_2px_0_0_#cbd5e1]" key={label}><p className="text-[9px] font-black uppercase tracking-wider text-slate-400 sm:text-[10px]">{label}</p><p className="mt-1 text-lg font-black text-ink">{value}</p></div>)}</div>
-        {comprehension?.question && <section className="mt-6 rounded-2xl border-2 border-primary-600 bg-primary-50/60 p-4 shadow-[0_4px_0_0_#7167f6] sm:p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-primary-700">Comprehension question</p><h3 className="mt-2 text-lg font-black">{comprehension.question}</h3><div className="mt-4 grid gap-2">{comprehension.options.map((option) => <button className={`rounded-xl border-2 border-slate-900 px-4 py-3 text-left font-bold transition ${selectedAnswer === option ? "-translate-y-0.5 bg-white text-primary-700 shadow-[0_3px_0_0_#7167f6]" : "bg-white/70 shadow-[0_2px_0_0_#cbd5e1] hover:-translate-y-0.5"}`} onClick={() => setSelectedAnswer(option)} type="button" key={option}>{option}</button>)}</div>{selectedAnswer && <p className={`mt-3 font-black ${selectedAnswer === comprehension.answer ? "text-emerald-700" : "text-amber-700"}`}>{selectedAnswer === comprehension.answer ? "Correct! You understood the story." : `Good try. The answer is: ${comprehension.answer}`}</p>}</section>}
-        <div className="mt-7 grid gap-3 sm:grid-cols-3"><button className="snp-button-secondary" onClick={onTryAgain} type="button"><LuRotateCcw />Try Again</button><button className="snp-button-secondary" onClick={onBack} type="button"><LuBookOpen />Back to Lessons</button><button className="snp-button-primary" disabled={continueDisabled} onClick={onNext} type="button">{hasNext ? comprehension?.question && !selectedAnswer ? "Answer to Continue" : "Next Lesson" : "Level Complete"}{hasNext && <LuArrowRight />}</button></div>
+    <Modal
+      open
+      centered
+      footer={null}
+      closable={false}
+      width={600}
+      className="rounded-3xl overflow-hidden"
+    >
+      <div className="text-center pt-2">
+        <div
+          className={`mx-auto grid h-16 w-16 place-items-center rounded-3xl text-3xl mb-3 ${
+            passed ? "bg-emerald-500/10 text-[#52c41a]" : "bg-orange-500/10 text-[#fa8c16]"
+          }`}
+        >
+          {passed ? <LuCircleCheckBig size={32} /> : <LuRotateCcw size={32} />}
+        </div>
+
+        <Tag color={passed ? "success" : "warning"} className="font-bold uppercase tracking-wider rounded-md">
+          {passed ? "Lesson Complete ✓" : "Practice Round"}
+        </Tag>
+
+        <h2 className="m-0 mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+          {passed ? "Great Job!" : "Keep Practicing!"}
+        </h2>
+        <p className="m-0 mt-1 text-sm text-slate-500 max-w-sm mx-auto">
+          {passed
+            ? "You reached the passing accuracy threshold for this lesson."
+            : "Aim for at least 70% accuracy to unlock the next lesson."}
+        </p>
+
+        <div className="my-4 flex justify-center">
+          <Stars count={result.stars} size={28} />
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 my-5">
+          {[
+            ["WPM", Math.round(result.wpm)],
+            ["CPM", Math.round(result.cpm)],
+            ["Accuracy", `${Math.round(result.accuracy)}%`],
+            ["Errors", result.errors],
+            ["Time", formatTime(result.duration)],
+            ["Score", result.score],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-2.5 text-center"
+            >
+              <p className="m-0 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {label}
+              </p>
+              <p className="m-0 mt-0.5 text-base font-black text-slate-900 dark:text-white">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Optional Comprehension Question */}
+        {comprehension?.question && (
+          <Card
+            variant="outlined"
+            className="my-5 text-left rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40"
+            styles={{ body: { padding: "16px" } }}
+          >
+            <p className="m-0 text-[10px] font-black uppercase tracking-wider text-[#52c41a]">
+              Story Comprehension Question
+            </p>
+            <h4 className="m-0 mt-1 text-sm font-black text-slate-900 dark:text-white">
+              {comprehension.question}
+            </h4>
+            <div className="mt-3 space-y-2">
+              {comprehension.options.map((option) => (
+                <div
+                  key={option}
+                  onClick={() => setSelectedAnswer(option)}
+                  className={`cursor-pointer rounded-xl border p-2.5 text-sm font-bold transition-all ${
+                    selectedAnswer === option
+                      ? "border-[#52c41a] bg-white dark:bg-slate-800 text-[#52c41a] shadow-sm"
+                      : "border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                  }`}
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+            {selectedAnswer && (
+              <p
+                className={`m-0 mt-3 text-xs font-bold ${
+                  selectedAnswer === comprehension.answer ? "text-[#52c41a]" : "text-[#fa8c16]"
+                }`}
+              >
+                {selectedAnswer === comprehension.answer
+                  ? "✓ Correct answer!"
+                  : `Answer: ${comprehension.answer}`}
+              </p>
+            )}
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <Button
+            size="large"
+            icon={<LuRotateCcw size={15} />}
+            onClick={onTryAgain}
+            className="font-bold flex items-center justify-center gap-1.5 h-11"
+          >
+            Try Again
+          </Button>
+          <Button
+            size="large"
+            icon={<LuBookOpen size={15} />}
+            onClick={onBack}
+            className="font-bold flex items-center justify-center gap-1.5 h-11"
+          >
+            Lessons List
+          </Button>
+          <Button
+            type="primary"
+            size="large"
+            disabled={continueDisabled}
+            onClick={onNext}
+            className="font-bold flex items-center justify-center gap-1.5 h-11"
+          >
+            <span>
+              {hasNext
+                ? comprehension?.question && !selectedAnswer
+                  ? "Answer to Continue"
+                  : "Next Lesson"
+                : "Level Complete"}
+            </span>
+            {hasNext && <LuArrowRight size={15} />}
+          </Button>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

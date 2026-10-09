@@ -28,4 +28,43 @@ describe("Khmer NIDA virtual keyboard", () => {
     expect(findKeyForOutput("km", "ៈ")).toEqual({ altGr: true, code: "Quote", shifted: false, output: "ៈ" });
     expect(findKeyForOutput("km", "ឱ្យ")).toEqual({ altGr: true, code: "KeyO", shifted: false, output: "ឱ" });
   });
+
+  it("maps Khmer NIDA space to the Space key", () => {
+    expect(findKeyForOutput("km", " ")).toEqual({ altGr: false, code: "Space", shifted: true, output: " " });
+    expect(findKeyForOutput("km", "\u200B")).toEqual({ altGr: false, code: "Space", shifted: false, output: "\u200B" });
+  });
+
+  it("maps English base, shifted, and punctuation outputs correctly", () => {
+    expect(getKeyboardOutput("en", "KeyA", false)).toBe("a");
+    expect(getKeyboardOutput("en", "KeyA", true)).toBe("A");
+    expect(getKeyboardOutput("en", "Digit1", true)).toBe("!");
+    expect(getKeyboardOutput("en", "Space", false)).toBe(" ");
+    expect(getKeyboardOutput("en", "Comma", false)).toBe(",");
+  });
+
+  it("produces full Khmer syllable clusters via sequential virtual key outputs", () => {
+    // Word "ខ្ញុំ" (I / me in Khmer):
+    // KeyX unshifted -> 'ខ'
+    const step1 = getKeyboardOutput("km", "KeyX", false);
+    expect(step1).toBe("ខ");
+
+    // KeyJ unshifted -> coeng '្'
+    const step2 = getKeyboardOutput("km", "KeyJ", false);
+    expect(step2).toBe("្");
+
+    // KeyJ shifted -> 'ញ'
+    const step3 = getKeyboardOutput("km", "KeyJ", true);
+    expect(step3).toBe("ញ");
+
+    // KeyU unshifted -> vowel 'ុ'
+    const step4 = getKeyboardOutput("km", "KeyU", false);
+    expect(step4).toBe("ុ");
+
+    // KeyM shifted -> nikkahit 'ំ'
+    const step5 = getKeyboardOutput("km", "KeyM", true);
+    expect(step5).toBe("ំ");
+
+    const fullWord = `${step1}${step2}${step3}${step4}${step5}`.normalize("NFC");
+    expect(fullWord).toBe("ខ្ញុំ");
+  });
 });

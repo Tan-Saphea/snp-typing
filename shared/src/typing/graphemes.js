@@ -11,16 +11,43 @@ function getSegmenter(locale) {
   return segmenters.get(locale);
 }
 
+const NORMALIZE_CACHE_LIMIT = 2000;
+const normalizeCache = new Map();
+
 export function normalizeForComparison(value) {
-  return String(value ?? "").replace(/\r\n?/g, "\n").normalize("NFC");
+  if (value === null || value === undefined) return "";
+  const key = String(value);
+  let result = normalizeCache.get(key);
+  if (result !== undefined) return result;
+
+  result = key.replace(/\r\n?/g, "\n").normalize("NFC");
+  if (normalizeCache.size >= NORMALIZE_CACHE_LIMIT) {
+    const firstKey = normalizeCache.keys().next().value;
+    normalizeCache.delete(firstKey);
+  }
+  normalizeCache.set(key, result);
+  return result;
 }
+
+const SEGMENT_CACHE_LIMIT = 2000;
+const segmentCache = new Map();
 
 export function segmentGraphemes(value, locale = "en") {
   const normalized = normalizeForComparison(value);
+  const cacheKey = `${locale}:${normalized}`;
+  let cached = segmentCache.get(cacheKey);
+  if (cached !== undefined) return cached;
 
-  return [...getSegmenter(locale).segment(normalized)].map(
-    ({ segment }) => segment,
+  cached = Object.freeze(
+    [...getSegmenter(locale).segment(normalized)].map(({ segment }) => segment),
   );
+
+  if (segmentCache.size >= SEGMENT_CACHE_LIMIT) {
+    const firstKey = segmentCache.keys().next().value;
+    segmentCache.delete(firstKey);
+  }
+  segmentCache.set(cacheKey, cached);
+  return cached;
 }
 
 export function alignGraphemes(target, input, locale = "en") {

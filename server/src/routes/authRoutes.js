@@ -5,10 +5,13 @@ import * as authController from "../controllers/authController.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { validate } from "../middleware/validate.js";
 import {
+  findUsernameSchema,
   loginSchema,
   logoutSchema,
-  registerSchema,
   refreshSchema,
+  registerSchema,
+  resetPasswordSchema,
+  verifyAccountSchema,
 } from "../validators/authValidators.js";
 
 const router = express.Router();
@@ -26,6 +29,19 @@ const loginLimiter = rateLimit({
   },
 });
 
+const recoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: "TOO_MANY_RECOVERY_ATTEMPTS",
+      message: "Too many account recovery attempts. Please wait and try again.",
+    },
+  },
+});
+
 router.post(
   "/login",
   loginLimiter,
@@ -37,6 +53,24 @@ router.post(
   loginLimiter,
   validate(registerSchema),
   authController.register,
+);
+router.post(
+  "/find-username",
+  recoveryLimiter,
+  validate(findUsernameSchema),
+  authController.findUsername,
+);
+router.post(
+  "/verify-account",
+  recoveryLimiter,
+  validate(verifyAccountSchema),
+  authController.verifyAccount,
+);
+router.post(
+  "/reset-password",
+  recoveryLimiter,
+  validate(resetPasswordSchema),
+  authController.resetPassword,
 );
 router.post("/session", authController.restoreSession);
 router.post("/refresh", validate(refreshSchema), authController.refresh);

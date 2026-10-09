@@ -1,20 +1,51 @@
-const tones = {
-  amber: "bg-amber-200 text-amber-900 shadow-[0_3px_0_0_#f59e0b]",
-  emerald: "bg-emerald-200 text-emerald-900 shadow-[0_3px_0_0_#10b981]",
-  rose: "bg-rose-200 text-rose-900 shadow-[0_3px_0_0_#fb7185]",
-  sky: "bg-sky-200 text-sky-900 shadow-[0_3px_0_0_#38bdf8]",
-  violet: "bg-violet-200 text-violet-900 shadow-[0_3px_0_0_#8b5cf6]",
+import { Card, Statistic } from "antd";
+
+const toneStyles = {
+  emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  amber: "bg-orange-500/10 text-[#fa8c16] border-orange-500/20",
+  sky: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+  violet: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+  rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
 };
 
-export default function MetricCard({ icon: Icon, label, note, tone = "sky", value }) {
+export default function MetricCard({
+  icon: Icon,
+  label,
+  note,
+  tone = "emerald",
+  value,
+  className = "",
+}) {
+  const iconClass = toneStyles[tone] ?? toneStyles.emerald;
+
   return (
-    <article className="snp-card snp-metric-card flex min-w-0 items-center gap-4 p-4 sm:p-5">
-      {Icon && <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl border-2 border-slate-900 ${tones[tone] ?? tones.sky}`}><Icon aria-hidden="true" size={21} /></span>}
-      <div className="min-w-0">
-        <p className="truncate text-[10px] font-black uppercase tracking-[0.13em] text-slate-500">{label}</p>
-        <p className="mt-1 truncate text-2xl font-black tracking-[-0.04em] text-ink">{value}</p>
-        {note && <p className="mt-1 truncate text-xs font-bold text-slate-400">{note}</p>}
+    <Card
+      variant="outlined"
+      className={`rounded-2xl shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 ${className}`}
+      styles={{ body: { padding: "20px" } }}
+    >
+      <div className="flex items-center gap-4">
+        {Icon && (
+          <div
+            className={`grid h-13 w-13 shrink-0 place-items-center rounded-2xl border p-3 ${iconClass}`}
+          >
+            <Icon aria-hidden="true" size={24} />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="m-0 truncate text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {label}
+          </p>
+          <p className="m-0 mt-0.5 truncate text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            {value}
+          </p>
+          {note && (
+            <p className="m-0 mt-0.5 truncate text-xs font-medium text-slate-400">
+              {note}
+            </p>
+          )}
+        </div>
       </div>
-    </article>
+    </Card>
   );
 }

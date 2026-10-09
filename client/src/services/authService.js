@@ -10,6 +10,21 @@ export async function registerRequest(profile) {
   return response.data.data;
 }
 
+export async function findUsernameRequest(criteria) {
+  const response = await publicApi.post("/auth/find-username", criteria);
+  return response.data.data;
+}
+
+export async function verifyAccountRequest(username) {
+  const response = await publicApi.post("/auth/verify-account", { username });
+  return response.data.data;
+}
+
+export async function resetPasswordRequest(data) {
+  const response = await publicApi.post("/auth/reset-password", data);
+  return response.data.data;
+}
+
 export async function refreshRequest(refreshToken) {
   const response = await publicApi.post(
     "/auth/refresh",

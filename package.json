@@ -1,6 +1,6 @@
 {
   "name": "snp-typing",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "private": true,
   "description": "SNP Typing educational desktop application",
   "author": "Tan Saphea",
@@ -22,6 +22,8 @@
     "lint": "npm run lint -w @snp/server && npm run lint -w @snp/client",
     "seed": "npm run seed -w @snp/server",
     "prepare:offline": "node electron/scripts/prepare-offline-data.mjs",
+    "audit:python": "python3 tools/system_auditor.py",
+    "sounds:python": "python3 tools/sound_synthesizer.py",
     "dist": "cross-env NEXT_PUBLIC_DESKTOP_BUILD=true npm run build -w @snp/client && npm run prepare:offline && electron-builder --config electron-builder.yml --win --x64",
     "dist:win": "npm run dist",
     "make": "npm run dist"

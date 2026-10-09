@@ -14,6 +14,7 @@ const defaultPreferences = Object.freeze({
   keyboardLayout: "en",
   fontSize: "normal",
   theme: "light",
+  superGuest: false,
 });
 
 class OfflineApiError extends Error {
@@ -50,7 +51,7 @@ async function verifyPassword(password, record) {
 }
 
 function sanitizeUser(user) {
-  const { password, ...safeUser } = user;
+  const { password, securityAnswer, ...safeUser } = user;
   return { ...safeUser, preferences: { ...defaultPreferences, ...safeUser.preferences } };
 }
 
@@ -239,6 +240,8 @@ class OfflineApi {
   }
 
   assertLessonUnlocked(userId, lesson) {
+    const user = this.database.users.find((item) => item.id === userId);
+    if (user?.preferences?.superGuest || user?.role === "superadmin" || user?.role === "admin") return;
     if (!lesson.prerequisiteLesson) return;
     const passed = this.userResults(userId).some((result) => result.lesson === lesson.prerequisiteLesson && result.passed);
     if (passed) return;
@@ -247,6 +250,8 @@ class OfflineApi {
   }
 
   listLessons(userId, params = {}) {
+    const user = this.database.users.find((item) => item.id === userId);
+    const isSuperGuest = Boolean(user?.preferences?.superGuest || user?.role === "superadmin" || user?.role === "admin");
     const progress = this.progressByLesson(userId);
     return this.lessons
       .filter((lesson) => lesson.isActive && lesson.isPublished)
@@ -257,7 +262,7 @@ class OfflineApi {
       .sort((a, b) => a.language.localeCompare(b.language) || a.level - b.level || a.order - b.order || a.category.localeCompare(b.category))
       .map((lesson) => {
         const prerequisiteProgress = lesson.prerequisiteLesson ? progress.get(lesson.prerequisiteLesson) : null;
-        const isLocked = Boolean(lesson.prerequisiteLesson && !prerequisiteProgress?.passed);
+        const isLocked = isSuperGuest ? false : Boolean(lesson.prerequisiteLesson && !prerequisiteProgress?.passed);
         const prerequisite = this.lessonsById.get(lesson.prerequisiteLesson);
         return {
           ...lesson,
@@ -278,8 +283,10 @@ class OfflineApi {
     const lessons = this.lessons
       .filter((lesson) => lesson.isActive && lesson.isPublished)
       .filter((lesson) => lesson.category !== "practice-templates")
-      .filter((lesson) => !["test", "game", "computer-skill"].includes(lesson.type))
+      .filter((lesson) => !["test", "game"].includes(lesson.type))
       .sort((a, b) => a.language.localeCompare(b.language) || a.level - b.level || a.order - b.order);
+    const typingLessons = lessons.filter((lesson) => lesson.type !== "computer-skill");
+    const computerSkillLessons = lessons.filter((lesson) => lesson.type === "computer-skill");
     const results = this.userResults(userId).sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
     const passedLessons = new Set(results.filter((result) => result.passed).map((result) => result.lesson));
     const bestByLesson = new Map();
@@ -299,13 +306,24 @@ class OfflineApi {
     }
 
     const languageSummary = (language) => {
-      const languageLessons = lessons.filter((lesson) => lesson.language === language);
+      const languageLessons = typingLessons.filter((lesson) => lesson.language === language);
       const completed = languageLessons.filter((lesson) => passedLessons.has(lesson.id)).length;
       const next = languageLessons.find((lesson) => !passedLessons.has(lesson.id) && (!lesson.prerequisiteLesson || passedLessons.has(lesson.prerequisiteLesson)));
       return {
         completedLessons: completed,
         totalLessons: languageLessons.length,
         percent: languageLessons.length ? Math.round((completed / languageLessons.length) * 100) : 0,
+        continueLesson: next ?? null,
+      };
+    };
+
+    const computerSkillsSummary = () => {
+      const completed = computerSkillLessons.filter((lesson) => passedLessons.has(lesson.id)).length;
+      const next = computerSkillLessons.find((lesson) => !passedLessons.has(lesson.id) && (!lesson.prerequisiteLesson || passedLessons.has(lesson.prerequisiteLesson)));
+      return {
+        completedLessons: completed,
+        totalLessons: computerSkillLessons.length,
+        percent: computerSkillLessons.length ? Math.round((completed / computerSkillLessons.length) * 100) : 0,
         continueLesson: next ?? null,
       };
     };
@@ -325,7 +343,7 @@ class OfflineApi {
     }
 
     const currentLevel = (language) => {
-      const languageLessons = lessons.filter((lesson) => lesson.language === language);
+      const languageLessons = typingLessons.filter((lesson) => lesson.language === language);
       const next = languageLessons.find((lesson) => !passedLessons.has(lesson.id));
       return next?.level ?? languageLessons.at(-1)?.level ?? 1;
     };
@@ -346,6 +364,7 @@ class OfflineApi {
         currentKhmerLevel: currentLevel("km"),
       },
       languages: { en: languageSummary("en"), km: languageSummary("km") },
+      computerSkills: computerSkillsSummary(),
       recent: results.slice(0, 6).map((result) => {
         const lesson = this.lessonsById.get(result.lesson);
         return {
@@ -366,10 +385,15 @@ class OfflineApi {
   async register(data) {
     const username = String(data.username ?? "").trim().toLowerCase();
     const password = String(data.password ?? "");
+    const rawName = String(data.name ?? data.firstName ?? "").trim();
+    const securityQuestion = String(data.securityQuestion ?? "Recovery Key").trim() || "Recovery Key";
+    const securityAnswer = String(data.securityAnswer ?? "").trim().toLowerCase();
     const details = [];
-    if (!String(data.firstName ?? "").trim()) details.push({ field: "body.firstName", message: "Enter your first name." });
+    if (!rawName) details.push({ field: "body.name", message: "Enter your name." });
     if (username.length < 3 || username.length > 64 || !/^[a-z0-9._-]+$/.test(username)) details.push({ field: "body.username", message: "Use 3-64 lowercase letters, numbers, dots, underscores, or hyphens." });
-    if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) details.push({ field: "body.password", message: "Use at least 8 characters with uppercase, lowercase, and a number." });
+    if (password.length < 6 || password.length > 128) details.push({ field: "body.password", message: "Use 6-128 characters." });
+    if (securityAnswer.length < 2 || securityAnswer.length > 200) details.push({ field: "body.securityAnswer", message: "Use 2-200 characters for the recovery key." });
+    if (securityAnswer !== "admin.snpis@2013") details.push({ field: "body.securityAnswer", message: "Recovery Key មិនត្រឹមត្រូវទេ! សូមទាក់ទងលោកគ្រូ ឬអ្នកគ្រូ។ (The recovery key is incorrect.)" });
     if (details.length) apiError(400, "VALIDATION_ERROR", "Please check the submitted information.", details);
     if (this.database.users.some((user) => user.username === username)) apiError(409, "USERNAME_TAKEN", "That username is already in use. Choose another one.");
 
@@ -377,13 +401,15 @@ class OfflineApi {
     const user = {
       id: randomId(),
       username,
-      firstName: String(data.firstName).trim(),
+      firstName: rawName,
       lastName: String(data.lastName ?? "").trim(),
-      khmerName: String(data.khmerName ?? "").trim(),
+      khmerName: String(data.khmerName ?? (/[ក-៿]/u.test(rawName) ? rawName : "")).trim(),
       gender: ["female", "male", "other", "unspecified"].includes(data.gender) ? data.gender : "unspecified",
       status: "active",
       preferences: { ...defaultPreferences },
       password: await createPasswordRecord(password),
+      securityQuestion,
+      securityAnswer: await createPasswordRecord(securityAnswer),
       createdAt: now,
       updatedAt: now,
       lastLoginAt: now,
@@ -399,6 +425,63 @@ class OfflineApi {
     user.lastLoginAt = new Date().toISOString();
     user.updatedAt = user.lastLoginAt;
     return this.issueSession(user.id);
+  }
+
+  findUsername(criteria = {}) {
+    const query = String(criteria.query ?? criteria.firstName ?? criteria.name ?? "").trim().toLowerCase();
+    if (!query) apiError(400, "MISSING_CRITERIA", "Please enter a name or username to search.");
+
+    return this.database.users
+      .filter((user) => user.status === "active")
+      .filter((user) => [user.username, user.firstName, user.lastName, user.khmerName]
+        .some((value) => String(value ?? "").toLowerCase().includes(query)))
+      .slice(0, 10)
+      .map((user) => ({
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName || "",
+        khmerName: user.khmerName || "",
+      }));
+  }
+
+  getAccountVerificationInfo(username) {
+    const normalizedUsername = String(username ?? "").trim().toLowerCase();
+    const user = this.database.users.find((item) => item.username === normalizedUsername && item.status === "active");
+    if (!user) apiError(404, "USER_NOT_FOUND", "No active account found with this username.");
+
+    return {
+      username: user.username,
+      firstName: user.firstName,
+      securityQuestion: user.securityQuestion || "Recovery Key",
+      hasSecurityQuestion: Boolean(user.securityAnswer),
+    };
+  }
+
+  async resetPassword(data) {
+    const username = String(data.username ?? "").trim().toLowerCase();
+    const newPassword = String(data.newPassword ?? "");
+    const providedAnswer = String(data.securityAnswer ?? "").trim().toLowerCase();
+    const user = this.database.users.find((item) => item.username === username && item.status === "active");
+    if (!user) apiError(404, "USER_NOT_FOUND", "No active account found with this username.");
+    if (!user.securityAnswer) apiError(409, "RECOVERY_NOT_CONFIGURED", "Password recovery is not configured for this account.");
+    if (newPassword.length < 6 || newPassword.length > 128) apiError(400, "VALIDATION_ERROR", "Use 6-128 characters for the new password.");
+    if (providedAnswer.length < 2) apiError(400, "VALIDATION_ERROR", "Enter the recovery key.");
+
+    const answerMatches = typeof user.securityAnswer === "object"
+      ? await verifyPassword(providedAnswer, user.securityAnswer)
+      : String(user.securityAnswer).trim().toLowerCase() === providedAnswer;
+    if (!answerMatches) apiError(400, "SECURITY_ANSWER_INCORRECT", "The recovery key is incorrect.");
+
+    user.password = await createPasswordRecord(newPassword);
+    user.passwordChangedAt = new Date().toISOString();
+    user.updatedAt = user.passwordChangedAt;
+    this.database.sessions = this.database.sessions.filter((session) => session.userId !== user.id);
+    for (const [token, userId] of this.accessTokens) {
+      if (userId === user.id) this.accessTokens.delete(token);
+    }
+    await this.save();
+
+    return { message: "Password reset successfully. Please sign in with your new password." };
   }
 
   async refresh(refreshToken) {
@@ -490,7 +573,7 @@ class OfflineApi {
   }
 
   async updatePreferences(user, preferences) {
-    const allowed = ["soundEnabled", "soundStyle", "soundVolume", "virtualKeyboard", "handGuide", "keyboardLayout", "fontSize", "theme"];
+    const allowed = ["soundEnabled", "soundStyle", "soundVolume", "virtualKeyboard", "handGuide", "keyboardLayout", "fontSize", "theme", "superGuest"];
     user.preferences ??= { ...defaultPreferences };
     for (const key of allowed) if (Object.hasOwn(preferences, key)) user.preferences[key] = preferences[key];
     user.updatedAt = new Date().toISOString();
@@ -505,6 +588,9 @@ class OfflineApi {
 
     if (verb === "POST" && route === "/auth/register") return { status: 201, data: await this.register(data) };
     if (verb === "POST" && route === "/auth/login") return { status: 200, data: await this.login(data) };
+    if (verb === "POST" && route === "/auth/find-username") return { status: 200, data: this.findUsername(data) };
+    if (verb === "POST" && route === "/auth/verify-account") return { status: 200, data: this.getAccountVerificationInfo(data.username) };
+    if (verb === "POST" && route === "/auth/reset-password") return { status: 200, data: await this.resetPassword(data) };
     if (verb === "POST" && route === "/auth/refresh") return { status: 200, data: await this.refresh(data.refreshToken) };
     if (verb === "POST" && route === "/auth/logout") { await this.logout(data.refreshToken); return { status: 204, data: null }; }
     if (verb === "POST" && route === "/auth/session") return { status: 200, data: null };

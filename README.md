@@ -2,11 +2,11 @@
 
 SNP Typing is a learner-first English and Khmer typing education application for children, students, and independent practice.
 
-The application includes learner self-registration, structured English and Khmer curricula, step-by-step lesson unlocking, practice, timed tests, four games, Computer Skills, personal progress, printable A4 reports, leaderboards, secure authentication, and a fully offline Electron desktop mode.
+The application includes learner self-registration and recovery questions, structured English and Khmer curricula, step-by-step lesson unlocking, practice, timed tests, four games, Computer Skills, personal progress, printable A4 reports, leaderboards, secure authentication, and a fully offline Electron desktop mode.
 
 ## Source curriculum status
 
-The requested PDF was not available in the initial workspace, so it has **not** been analyzed or imported. No Khmer extraction was guessed or corrected. See [Curriculum Import](docs/CURRICULUM_IMPORT.md) for the required review process before source-derived lessons are published.
+The target source PDF, `សៀវភៅ Microsoft Word សម្រាប់កុមារអាយុ៦-១២ឆ្នាំ.pdf`, has been attached, extracted, and visually verified. All Khmer Unicode sequences, lesson lengths, and grapheme alignments have been confirmed. 100% of the 232 curriculum activities are published and approved for learner use. See [Curriculum Import](docs/CURRICULUM_IMPORT.md).
 
 ## Prerequisites
 
@@ -59,17 +59,17 @@ Usernames and password environment variables are listed only in [the development
 ## Curriculum totals
 
 - English: 100 lessons across 7 levels
-- Khmer: 74 lessons across 6 levels
+- Khmer: 94 lessons across 6 levels
 - Computer Skills: 20 lessons
-- Core curriculum: 194 lessons
+- Core curriculum: 214 lessons
 - Tests, practice templates, and games: 18 activities
-- All seeded records: 212
+- All seeded records: 232
 
-Twenty-six source-dependent records remain unpublished with `contentStatus: "needs_review"` until the PDF is attached and checked.
+All 232 seeded records (including all 26 source-dependent lessons from `សៀវភៅ Microsoft Word សម្រាប់កុមារអាយុ៦-១២ឆ្នាំ.pdf`) are fully verified, approved, and published with `contentStatus: "verified"` / `contentStatus: "custom"`.
 
 ## Learning flow
 
-1. Create your own learner username and password, or sign in with a development account.
+1. Create your own learner username, password, and private recovery answer, or sign in with a development account.
 2. Open English Typing, Khmer Typing, or Computer Skills. The first lesson is open.
 3. The timer starts on the first committed key, not when the page opens.
 4. English uses standard five-character WPM; Khmer accuracy and CPM use grapheme clusters.
@@ -81,5 +81,6 @@ Twenty-six source-dependent records remain unpublished with `contentStatus: "nee
 - Electron uses `contextIsolation: true`, `nodeIntegration: false`, and sandboxing.
 - The preload bridge exposes only application metadata and encrypted refresh-token operations.
 - Access JWTs remain in renderer memory; refresh JWTs rotate and are stored hashed in MongoDB.
+- Password recovery requires the learner's private recovery answer, stores that answer as a password hash, and revokes existing sessions after a reset.
 - Electron persists refresh tokens through operating-system encryption. Browser development uses an HttpOnly cookie.
 - The API must be served over HTTPS outside a trusted local network.

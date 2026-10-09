@@ -1,21 +1,36 @@
-import { LuArrowLeft, LuKeyboardOff, LuLayoutDashboard } from "react-icons/lu";
+import { Button, Card, Result } from "antd";
+import { LuArrowLeft, LuLayoutDashboard } from "react-icons/lu";
 import { Link } from "../components/NextRouter.jsx";
 
 export default function NotFoundPage() {
   return (
-    <main className="snp-app-canvas grid min-h-screen place-items-center p-6">
-      <section className="snp-result-dialog relative max-w-lg overflow-hidden p-8 text-center sm:p-10">
-        <div className="pointer-events-none absolute -right-8 -top-8 text-9xl font-black text-primary-600/[0.06]">404</div>
-        <span className="mx-auto grid h-20 w-20 place-items-center rounded-3xl border-2 border-slate-900 bg-amber-200 text-3xl text-amber-900 shadow-[0_5px_0_0_#f59e0b]"><LuKeyboardOff /></span>
-        <p className="mt-6 text-xs font-black uppercase tracking-[0.16em] text-primary-600">Error 404</p>
-        <h1 className="mt-3 text-3xl font-black text-ink">Page not found</h1>
-        <p className="mt-4 text-slate-600">
-          The requested SNP Typing screen does not exist.
-        </p>
-        <Link className="snp-button-primary mt-6" to="/">
-          <LuLayoutDashboard />Return to dashboard<LuArrowLeft className="rotate-180" />
-        </Link>
-      </section>
+    <main className="grid min-h-screen place-items-center bg-[#f4f6f9] dark:bg-[#0f172a] p-6">
+      <Card
+        variant="outlined"
+        className="w-full max-w-lg rounded-3xl p-6 sm:p-10 text-center shadow-xl dark:border-slate-800"
+      >
+        <Result
+          status="404"
+          title={<span className="text-3xl font-black">Page Not Found</span>}
+          subTitle={
+            <span className="text-slate-500 font-medium">
+              The requested SNP Typing screen or lesson does not exist.
+            </span>
+          }
+          extra={
+            <Link to="/">
+              <Button
+                type="primary"
+                size="large"
+                icon={<LuLayoutDashboard size={16} />}
+                className="font-bold inline-flex items-center gap-2 h-11 px-6"
+              >
+                <span>Return to Dashboard</span>
+              </Button>
+            </Link>
+          }
+        />
+      </Card>
     </main>
   );
 }

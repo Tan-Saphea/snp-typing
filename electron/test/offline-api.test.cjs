@@ -69,14 +69,79 @@ test("offline API persists accounts, sessions, results, settings, and lesson loc
   }));
 
   const api = createOfflineApi({ dataPath, lessonsPath });
+  const rejectedRegistration = await api.request({
+    method: "POST",
+    path: "/auth/register",
+    data: {
+      name: "Offline Learner",
+      username: "offline.learner",
+      password: "Offline123",
+      securityQuestion: "Recovery Key",
+      securityAnswer: "WrongKey",
+      gender: "unspecified",
+    },
+  });
+  assert.equal(rejectedRegistration.status, 400);
+
   const registration = await api.request({
     method: "POST",
     path: "/auth/register",
-    data: { firstName: "Offline", username: "offline.learner", password: "Offline123", gender: "unspecified" },
+    data: {
+      name: "Offline Learner",
+      username: "offline.learner",
+      password: "Offline123",
+      securityQuestion: "Recovery Key",
+      securityAnswer: "Admin.snpis@2013",
+      gender: "unspecified",
+    },
   });
   assert.equal(registration.status, 201);
-  const { accessToken, refreshToken, user } = registration.body.data;
+  const {
+    accessToken: initialAccessToken,
+    refreshToken: initialRefreshToken,
+    user,
+  } = registration.body.data;
   assert.equal(user.username, "offline.learner");
+  assert.equal(user.securityAnswer, undefined);
+
+  const matches = await api.request({
+    method: "POST",
+    path: "/auth/find-username",
+    data: { query: "Offline Learner" },
+  });
+  assert.equal(matches.body.data[0].username, "offline.learner");
+
+  const verification = await api.request({
+    method: "POST",
+    path: "/auth/verify-account",
+    data: { username: "offline.learner" },
+  });
+  assert.equal(verification.body.data.hasSecurityQuestion, true);
+
+  const rejectedReset = await api.request({
+    method: "POST",
+    path: "/auth/reset-password",
+    data: { username: "offline.learner", newPassword: "Recovered123", securityAnswer: "Wrong" },
+  });
+  assert.equal(rejectedReset.status, 400);
+  assert.equal(rejectedReset.body.error.code, "SECURITY_ANSWER_INCORRECT");
+
+  const reset = await api.request({
+    method: "POST",
+    path: "/auth/reset-password",
+    data: { username: "offline.learner", newPassword: "Recovered123", securityAnswer: "Admin.snpis@2013" },
+  });
+  assert.equal(reset.status, 200);
+
+  const revokedAccess = await api.request({ method: "GET", path: "/lessons", accessToken: initialAccessToken });
+  assert.equal(revokedAccess.status, 401);
+  const revokedRefresh = await api.request({ method: "POST", path: "/auth/refresh", data: { refreshToken: initialRefreshToken } });
+  assert.equal(revokedRefresh.status, 401);
+  const oldPassword = await api.request({ method: "POST", path: "/auth/login", data: { username: "offline.learner", password: "Offline123" } });
+  assert.equal(oldPassword.status, 401);
+  const recoveredLogin = await api.request({ method: "POST", path: "/auth/login", data: { username: "offline.learner", password: "Recovered123" } });
+  assert.equal(recoveredLogin.status, 200);
+  const { accessToken, refreshToken } = recoveredLogin.body.data;
 
   const lessonList = await api.request({ method: "GET", path: "/lessons", accessToken });
   assert.equal(lessonList.body.data.lessons[0].isLocked, false);
@@ -106,6 +171,8 @@ test("offline API persists accounts, sessions, results, settings, and lesson loc
 
   const persisted = await fs.readFile(dataPath, "utf8");
   assert.equal(persisted.includes("Offline123"), false);
+  assert.equal(persisted.includes("Recovered123"), false);
+  assert.equal(persisted.includes("Admin.snpis@2013"), false);
   assert.equal(persisted.includes(refreshToken), false);
 });
 
@@ -118,20 +185,40 @@ test("generated curriculum is available offline with independent English and Khm
   const registration = await api.request({
     method: "POST",
     path: "/auth/register",
-    data: { firstName: "Curriculum", username: "curriculum.test", password: "Offline123" },
+    data: {
+      firstName: "Curriculum",
+      username: "curriculum.test",
+      password: "Offline123",
+      securityQuestion: "Recovery Key",
+      securityAnswer: "Admin.snpis@2013",
+    },
   });
   const accessToken = registration.body.data.accessToken;
   const lessonList = await api.request({ method: "GET", path: "/lessons", accessToken });
   const lessons = lessonList.body.data.lessons;
   const englishLessons = lessons.filter((item) => item.language === "en");
   const khmerLessons = lessons.filter((item) => item.language === "km");
+  const computerSkills = lessons.filter((item) => item.type === "computer-skill");
 
   assert.equal(lessonList.status, 200);
-  assert.ok(lessons.length >= 180);
-  assert.ok(englishLessons.length >= 100);
-  assert.ok(khmerLessons.length >= 60);
+  assert.equal(lessons.length, 232);
+  assert.equal(englishLessons.length, 129);
+  assert.equal(khmerLessons.length, 103);
+  assert.equal(computerSkills.length, 20);
   assert.match(lessons[0].id, /^[a-f0-9]{24}$/);
   assert.equal(englishLessons.find((item) => item.slug === "en-basics-01-asdf").isLocked, false);
   assert.equal(khmerLessons.find((item) => item.slug === "km-consonants-01").isLocked, false);
   assert.equal(englishLessons.find((item) => item.slug === "en-basics-02-jkl").isLocked, true);
+
+  const savedComputerSkill = await api.request({
+    method: "POST",
+    path: "/results",
+    accessToken,
+    data: resultPayload(computerSkills[0].id),
+  });
+  assert.equal(savedComputerSkill.status, 201);
+  const progress = await api.request({ method: "GET", path: "/progress/me", accessToken });
+  assert.equal(progress.body.data.computerSkills.completedLessons, 1);
+  assert.equal(progress.body.data.computerSkills.totalLessons, 20);
+  assert.equal(progress.body.data.stats.lessonsCompleted, 1);
 });

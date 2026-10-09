@@ -1,12 +1,51 @@
 import { useEffect, useState } from "react";
-import { LuCircleCheckBig, LuHand, LuKeyboard, LuLogOut, LuMoon, LuSave, LuSettings, LuSparkles, LuType, LuVolume2 } from "react-icons/lu";
-import { useNavigate } from "../components/NextRouter.jsx";
+import {
+  Alert,
+  App,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Divider,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Slider,
+  Switch,
+  Tag,
+  Typography,
+} from "antd";
+import {
+  LuCircleCheckBig,
+  LuHand,
+  LuKeyRound,
+  LuKeyboard,
+  LuLock,
+  LuLogOut,
+  LuMoon,
+  LuSave,
+  LuSettings,
+  LuShieldAlert,
+  LuShieldCheck,
+  LuSparkles,
+  LuType,
+  LuLockKeyholeOpen,
+  LuUser,
+  LuVolume2,
+} from "react-icons/lu";
 
-import { previewKeyboardSound } from "../features/typing/keyboardSound.js";
 import PageHero from "../components/PageHero.jsx";
+import { useNavigate } from "../components/NextRouter.jsx";
+import { previewKeyboardSound } from "../features/typing/keyboardSound.js";
 import { getApiErrorMessage } from "../services/api.js";
 import { savePreferences } from "../services/settingsService.js";
 import { useAuthStore } from "../stores/authStore.js";
+import { useTheme } from "../theme/ThemeContext.jsx";
+
+const { Text, Title } = Typography;
+
+const SUPER_GUEST_PASSWORD = "Superguest.snpis123!@#";
 
 const storageKey = "snp-learner-settings";
 const defaults = {
@@ -17,28 +56,26 @@ const defaults = {
   handGuide: true,
   largeText: false,
   theme: "light",
+  superGuest: false,
 };
 
 function loadSettings() {
-  try { return { ...defaults, ...JSON.parse(window.localStorage.getItem(storageKey)) }; }
-  catch { return defaults; }
-}
-
-function ToggleRow({ checked, description, icon: Icon, label, onChange }) {
-  return (
-    <div className="flex items-center justify-between gap-4 p-5 sm:gap-6 sm:p-6">
-      <div className="flex min-w-0 items-start gap-3">{Icon && <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><Icon size={19} /></span>}<div><h2 className="font-black text-ink">{label}</h2><p className="mt-1 text-sm leading-5 text-slate-500">{description}</p></div></div>
-      <button className={`relative h-8 w-14 shrink-0 rounded-xl border-2 border-slate-800 transition-colors ${checked ? "bg-[#059669]" : "bg-slate-200"}`} aria-label={`Turn ${label.toLowerCase()} ${checked ? "off" : "on"}`} aria-pressed={checked} onClick={() => onChange(!checked)} type="button"><span className={`absolute top-0.5 h-6 w-6 rounded-xl border-2 border-slate-800 bg-white transition ${checked ? "left-7" : "left-0.5"}`} /></button>
-    </div>
-  );
+  try {
+    return { ...defaults, ...JSON.parse(window.localStorage.getItem(storageKey)) };
+  } catch {
+    return defaults;
+  }
 }
 
 export default function SettingsPage() {
+  const { message } = App.useApp();
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const local = loadSettings();
+  const { theme, setTheme, largeText, setLargeText } = useTheme();
+
   const [settings, setSettings] = useState({
     ...local,
     sound: user?.preferences?.soundEnabled ?? local.sound,
@@ -46,43 +83,142 @@ export default function SettingsPage() {
     soundVolume: user?.preferences?.soundVolume ?? local.soundVolume,
     virtualKeyboard: user?.preferences?.virtualKeyboard ?? local.virtualKeyboard,
     handGuide: user?.preferences?.handGuide ?? local.handGuide,
-    largeText: user?.preferences?.fontSize ? user.preferences.fontSize === "large" : local.largeText,
-    theme: user?.preferences?.theme ?? local.theme,
+    largeText: user?.preferences?.fontSize
+      ? user.preferences.fontSize === "large"
+      : largeText,
+    theme: user?.preferences?.theme ?? theme ?? local.theme,
+    superGuest: user?.preferences?.superGuest ?? local.superGuest ?? false,
   });
+
+  useEffect(() => {
+    if (theme && settings.theme !== theme) {
+      setSettings((s) => ({ ...s, theme }));
+    }
+  }, [theme]);
+
   const [status, setStatus] = useState({ saving: false, saved: false, error: "" });
+
+  // Super Guest password modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
   }
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("snp-large-text", settings.largeText);
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    document.documentElement.classList.toggle("snp-dark", settings.theme === "dark" || (settings.theme === "system" && prefersDark));
-  }, [settings.largeText, settings.theme]);
-
   function previewSound() {
-    previewKeyboardSound({ enabled: settings.sound, style: settings.soundStyle, volume: settings.soundVolume });
+    previewKeyboardSound({
+      enabled: settings.sound,
+      style: settings.soundStyle,
+      volume: settings.soundVolume,
+    });
+  }
+
+  const handleThemeChange = (val) => {
+    setSettings((c) => ({ ...c, theme: val }));
+    setTheme(val);
+  };
+
+  const handleLargeTextToggle = (checked) => {
+    setSettings((c) => ({ ...c, largeText: checked }));
+    setLargeText(checked);
+  };
+
+  async function savePreferencesToApi(nextSettings) {
+    const updatedUser = await savePreferences({
+      soundEnabled: nextSettings.sound,
+      soundStyle: nextSettings.soundStyle,
+      soundVolume: Number(nextSettings.soundVolume),
+      virtualKeyboard: nextSettings.virtualKeyboard,
+      handGuide: nextSettings.handGuide,
+      fontSize: nextSettings.largeText ? "large" : "normal",
+      theme: nextSettings.theme,
+      superGuest: Boolean(nextSettings.superGuest),
+    });
+    window.localStorage.setItem(storageKey, JSON.stringify(nextSettings));
+    setUser(updatedUser);
+    setTheme(nextSettings.theme);
+    setLargeText(nextSettings.largeText);
+    return updatedUser;
   }
 
   async function savePersonal() {
     setStatus({ saving: true, saved: false, error: "" });
     try {
-      const updatedUser = await savePreferences({
-        soundEnabled: settings.sound,
-        soundStyle: settings.soundStyle,
-        soundVolume: Number(settings.soundVolume),
-        virtualKeyboard: settings.virtualKeyboard,
-        handGuide: settings.handGuide,
-        fontSize: settings.largeText ? "large" : "normal",
-        theme: settings.theme,
-      });
-      window.localStorage.setItem(storageKey, JSON.stringify(settings));
-      setUser(updatedUser);
+      if (user) {
+        await savePreferencesToApi(settings);
+      } else {
+        window.localStorage.setItem(storageKey, JSON.stringify(settings));
+        setTheme(settings.theme);
+        setLargeText(settings.largeText);
+        window.dispatchEvent(new Event("snp-settings-changed"));
+      }
       setStatus({ saving: false, saved: true, error: "" });
+      message.success("Settings saved successfully!");
     } catch (error) {
+      window.localStorage.setItem(storageKey, JSON.stringify(settings));
+      setTheme(settings.theme);
+      setLargeText(settings.largeText);
+      window.dispatchEvent(new Event("snp-settings-changed"));
       setStatus({ saving: false, saved: false, error: getApiErrorMessage(error) });
+      message.error(getApiErrorMessage(error));
+    }
+  }
+
+  // Handle Super Guest switch toggle
+  function handleSuperGuestToggle(checked) {
+    if (checked) {
+      setPasswordInput("");
+      setPasswordError("");
+      setModalOpen(true);
+    } else {
+      const next = { ...settings, superGuest: false };
+      setSettings(next);
+      savePreferencesToApi(next)
+        .then(() => {
+          message.info("បានបិទ Super Guest Mode។ កម្រិតមេរៀនត្រឡប់ទៅដំណើរការតាមលំដាប់ធម្មតា។");
+        })
+        .catch((err) => {
+          message.error(getApiErrorMessage(err));
+        });
+    }
+  }
+
+  // Handle Super Guest Password verification
+  async function handleVerifySuperGuestPassword(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const cleanInput = String(passwordInput ?? "").trim();
+    if (!cleanInput) {
+      setPasswordError("សូមបញ្ចូលពាក្យសម្ងាត់ Super Key / Super Guest (Please enter password)");
+      return;
+    }
+
+    const isValidPassword =
+      cleanInput === "Superguest.snpis123!@#" ||
+      cleanInput === "Admin.snpis@2013" ||
+      cleanInput.toLowerCase() === "admin.snpis@2013" ||
+      cleanInput.toLowerCase() === "superguest.snpis123!@#";
+
+    if (isValidPassword) {
+      setVerifying(true);
+      setPasswordError("");
+      try {
+        const next = { ...settings, superGuest: true };
+        setSettings(next);
+        await savePreferencesToApi(next);
+        setModalOpen(false);
+        setPasswordInput("");
+        message.success("បានបើក Super Guest Mode ជោគជ័យ! មេរៀនទាំងអស់ត្រូវបានដោះសោ (All Lessons Unlocked)");
+      } catch (error) {
+        setPasswordError(getApiErrorMessage(error));
+      } finally {
+        setVerifying(false);
+      }
+    } else {
+      setPasswordError("ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ! សូមព្យាយាមម្តងទៀត (Incorrect password)");
     }
   }
 
@@ -90,73 +226,404 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHero
         badges={[
-          { icon: LuKeyboard, label: "Keyboard guidance" },
-          { icon: LuSparkles, label: "Accessible learning" },
+          { icon: LuKeyboard, label: "Interactive feedback" },
+          { icon: LuSparkles, label: "Personalized workspace" },
         ]}
-        description="Personalize typing feedback, on-screen guidance, readability, and the app theme. Your choices follow your learner account."
-        eyebrow="Learning preferences"
+        description="Personalize typing audio, on-screen guidance, typography scale, and theme preferences. Your choices follow your learner account."
+        eyebrow="Preferences"
         icon={LuSettings}
-        title="Make SNP Typing yours"
+        title="Settings & Preferences"
         tone="emerald"
       />
-      
-      {/* Profile & Account Banner */}
-      <section className="snp-card overflow-hidden bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 flex flex-col gap-5">
-        <div className="flex items-center gap-4 text-left">
-          <div className={`grid h-16 w-16 place-items-center rounded-xl border-2 border-slate-800 text-2xl font-black shadow-[0_3px_0_0_#334155] ${
-            user?.gender === "male" ? "bg-sky-100 text-sky-800" :
-            user?.gender === "female" ? "bg-rose-100 text-rose-800" :
-            "bg-white text-slate-800"
-          }`}>
-            {user?.firstName?.slice(0, 1)?.toUpperCase() || "S"}
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-black text-slate-800">{[user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username}</h2>
-              {user?.gender === "male" && (
-                <span className="inline-flex items-center gap-1 rounded-lg border border-sky-300 bg-sky-50 px-2 py-0.5 text-xs font-extrabold text-sky-700">
-                  ♂️ Male
-                </span>
-              )}
-              {user?.gender === "female" && (
-                <span className="inline-flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-extrabold text-rose-700">
-                  ♀️ Female
-                </span>
+
+      {/* Profile & Account Banner Card */}
+      <Card
+        variant="outlined"
+        className="rounded-2xl shadow-sm dark:border-slate-800"
+        styles={{ body: { padding: "24px" } }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <Avatar
+              size={64}
+              className={`text-2xl font-black ${
+                user?.gender === "male"
+                  ? "bg-sky-500 text-white"
+                  : user?.gender === "female"
+                  ? "bg-rose-500 text-white"
+                  : "bg-[#52c41a] text-white"
+              }`}
+            >
+              {user?.firstName?.slice(0, 1)?.toUpperCase() || <LuUser size={28} />}
+            </Avatar>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="m-0 text-xl font-black text-slate-900 dark:text-white">
+                  {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username}
+                </h3>
+                {user?.gender === "male" && (
+                  <Tag color="blue" className="rounded-md font-bold">Male</Tag>
+                )}
+                {user?.gender === "female" && (
+                  <Tag color="magenta" className="rounded-md font-bold">Female</Tag>
+                )}
+                {settings.superGuest && (
+                  <Tag color="gold" className="rounded-md font-bold flex items-center gap-1">
+                    <LuLockKeyholeOpen size={12} /> Super Guest (All Unlocked)
+                  </Tag>
+                )}
+              </div>
+              <p className="m-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Learner Account · ID: {user?.studentId || "Personal"}
+              </p>
+              {user?.khmerName && (
+                <p className="m-0 mt-0.5 text-xs font-bold text-[#52c41a]">
+                  Khmer: {user.khmerName}
+                </p>
               )}
             </div>
-            <p className="mt-1 text-sm font-semibold capitalize text-slate-500">
-              Learner Account · ID: {user?.studentId || "Personal"}
-            </p>
-            {user?.khmerName && (
-              <p className="mt-0.5 text-xs font-semibold text-slate-400">
-                Khmer Name: {user.khmerName}
+          </div>
+
+          <Button
+            danger
+            icon={<LuLogOut size={16} />}
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 font-bold h-10 px-5"
+          >
+            Sign Out
+          </Button>
+        </div>
+      </Card>
+
+      {/* Super Guest Access Card */}
+      <Card
+        variant="outlined"
+        className={`rounded-2xl shadow-sm transition-all duration-200 ${
+          settings.superGuest
+            ? "border-amber-400 bg-amber-500/5 dark:border-amber-600/50"
+            : "border-slate-200 dark:border-slate-800"
+        }`}
+        styles={{ body: { padding: "20px 24px" } }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div
+              className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${
+                settings.superGuest
+                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              {settings.superGuest ? <LuLockKeyholeOpen size={22} /> : <LuKeyRound size={22} />}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="m-0 text-base font-bold text-slate-900 dark:text-white">
+                  Super Guest Mode (ដោះសោមេរៀនទាំងអស់)
+                </h4>
+                {settings.superGuest ? (
+                  <Tag color="success" className="font-bold rounded-md">
+                    ACTIVE (ALL UNLOCKED)
+                  </Tag>
+                ) : (
+                  <Tag color="default" className="font-bold rounded-md text-slate-400">
+                    LOCKED MODE
+                  </Tag>
+                )}
+              </div>
+              <p className="m-0 mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                បើកមុខងារនេះដើម្បីចូលរៀន និងវាយមេរៀនគ្រប់ Level ទាំងអស់ភ្លាមៗ ដោយមិនចាំបាច់រង់ចាំប្រឡងជាប់មេរៀនមុន (Unlocks all Khmer & English lessons without prerequisites).
               </p>
-            )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <Switch
+              checked={settings.superGuest}
+              onChange={handleSuperGuestToggle}
+              className={settings.superGuest ? "bg-amber-500" : ""}
+            />
           </div>
         </div>
-        <button
-          className="snp-button-secondary border-2 border-slate-800 hover:bg-red-50 hover:text-red-700 w-full sm:w-auto px-5 py-2.5 text-sm font-bold flex items-center justify-center gap-2"
-          onClick={handleLogout}
-          type="button"
-        >
-          <LuLogOut size={16} /> Sign Out
-        </button>
-      </section>
+      </Card>
 
-      <section className="snp-card divide-y divide-slate-100 overflow-hidden">
-        <ToggleRow checked={settings.sound} description="Play gentle key feedback during typing lessons and tests." icon={LuVolume2} label="Typing sounds" onChange={(value) => setSettings((current) => ({ ...current, sound: value }))} />
-        <div className="grid gap-5 p-6 sm:grid-cols-[1fr_180px] sm:items-center">
-          <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><LuVolume2 /></span><div><h2 className="font-black text-ink">Sound style</h2><p className="mt-1 text-sm text-slate-500">Choose a soft keyboard, classic typewriter, or playful bubble sound.</p></div></div>
-          <div className="flex gap-2"><select className="snp-input min-w-0" disabled={!settings.sound} onChange={(event) => setSettings((current) => ({ ...current, soundStyle: event.target.value }))} value={settings.soundStyle}><option value="soft">Crisp Keyboard · Recommended</option><option value="typewriter">Classic Typewriter</option><option value="bubble">Bubble Pop</option></select><button className="snp-icon-button" disabled={!settings.sound} onClick={previewSound} title="Preview typing sound" type="button"><LuVolume2 /></button></div>
+      {/* Main Settings Card */}
+      <Card
+        variant="outlined"
+        title={<span className="text-base font-black">Typing & Appearance Options</span>}
+        className="rounded-2xl shadow-sm dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800"
+        styles={{ body: { padding: "0" } }}
+      >
+        {/* Typing Sounds */}
+        <div className="flex items-center justify-between p-6 gap-4">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuVolume2 size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Typing Sounds
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Play auditory feedback during typing lessons and tests.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={settings.sound}
+            onChange={(checked) => setSettings((c) => ({ ...c, sound: checked }))}
+          />
         </div>
-        <label className="grid gap-5 p-6 sm:grid-cols-[1fr_220px] sm:items-center"><span><span className="block font-black text-ink">Sound volume</span><span className="mt-1 block text-sm text-slate-500">Adjust key sounds without changing Windows volume.</span></span><span className="flex items-center gap-3"><input className="w-full accent-sky-600" disabled={!settings.sound} max="1" min="0" onChange={(event) => setSettings((current) => ({ ...current, soundVolume: Number(event.target.value) }))} onPointerUp={previewSound} step="0.05" type="range" value={settings.soundVolume} /><b className="w-10 text-right text-sm text-slate-600">{Math.round(settings.soundVolume * 100)}%</b></span></label>
-        <ToggleRow checked={settings.virtualKeyboard} description="Show the complete English or Khmer desktop keyboard under lessons." icon={LuKeyboard} label="Virtual keyboard" onChange={(value) => setSettings((current) => ({ ...current, virtualKeyboard: value }))} />
-        <ToggleRow checked={settings.handGuide} description="Show which hand and finger should press the highlighted key." icon={LuHand} label="Hand and finger guide" onChange={(value) => setSettings((current) => ({ ...current, handGuide: value }))} />
-        <ToggleRow checked={settings.largeText} description="Increase text size throughout the application." icon={LuType} label="Large text" onChange={(value) => setSettings((current) => ({ ...current, largeText: value }))} />
-        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-800 bg-[#ecfdf5] text-[#047857] shadow-[0_2px_0_0_#334155]"><LuMoon /></span><div><h2 className="font-black text-ink">Theme</h2><p className="mt-1 text-sm text-slate-500">Choose a light theme or follow the computer setting.</p></div></div><select className="snp-input sm:max-w-44" onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value }))} value={settings.theme}><option value="light">Light</option><option value="system">System</option><option value="dark">Dark</option></select></div>
-      </section>
-      <div className="flex flex-wrap items-center gap-4"><button className="snp-button-primary" disabled={status.saving} onClick={savePersonal} type="button"><LuSave />{status.saving ? "Saving…" : "Save my settings"}</button>{status.saved && <p className="inline-flex items-center gap-2 font-bold text-emerald-700"><LuCircleCheckBig />Settings saved.</p>}</div>
-      {status.error && <p className="rounded-xl border-2 border-red-300 bg-red-50 p-4 font-bold text-red-700 shadow-[0_3px_0_0_#fca5a5]">{status.error}</p>}
+
+        {/* Sound Style */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuVolume2 size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Sound Style
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Choose a sound feedback style that suits your focus.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select
+              disabled={!settings.sound}
+              value={settings.soundStyle}
+              onChange={(val) => setSettings((c) => ({ ...c, soundStyle: val }))}
+              style={{ width: 220 }}
+              options={[
+                { value: "soft", label: "Crisp Keyboard (Recommended)" },
+                { value: "thock", label: "Deep Thock (Mechanical)" },
+                { value: "mechanical", label: "Clicky Blue Switch" },
+                { value: "typewriter", label: "Classic Typewriter" },
+                { value: "bubble", label: "Bubble Pop" },
+              ]}
+            />
+            <Button
+              disabled={!settings.sound}
+              icon={<LuVolume2 size={16} />}
+              onClick={previewSound}
+              title="Preview Sound"
+            />
+          </div>
+        </div>
+
+        {/* Sound Volume Slider */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div>
+            <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+              Sound Volume
+            </h4>
+            <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+              Adjust key feedback volume without changing computer volume.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-64">
+            <Slider
+              min={0}
+              max={1}
+              step={0.05}
+              disabled={!settings.sound}
+              value={settings.soundVolume}
+              onChange={(val) => setSettings((c) => ({ ...c, soundVolume: val }))}
+              className="flex-1"
+            />
+            <span className="w-12 text-right text-xs font-bold text-slate-600 dark:text-slate-400">
+              {Math.round(settings.soundVolume * 100)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Virtual Keyboard */}
+        <div className="flex items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuKeyboard size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Virtual Keyboard
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Display the on-screen English or Khmer keyboard guide under lessons.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={settings.virtualKeyboard}
+            onChange={(checked) => setSettings((c) => ({ ...c, virtualKeyboard: checked }))}
+          />
+        </div>
+
+        {/* Hand Guide */}
+        <div className="flex items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuHand size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Hand & Finger Guide
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Show visual indicators for recommended fingers for each highlighted key.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={settings.handGuide}
+            onChange={(checked) => setSettings((c) => ({ ...c, handGuide: checked }))}
+          />
+        </div>
+
+        {/* Large Text */}
+        <div className="flex items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuType size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Large Text Mode
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Increase typography size throughout the interface for easier reading.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={settings.largeText}
+            onChange={handleLargeTextToggle}
+          />
+        </div>
+
+        {/* App Theme */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 gap-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-[#52c41a]">
+              <LuMoon size={20} />
+            </div>
+            <div>
+              <h4 className="m-0 text-sm font-bold text-slate-900 dark:text-white">
+                Interface Theme
+              </h4>
+              <p className="m-0 mt-1 text-xs text-slate-500 leading-relaxed">
+                Choose clean Light mode, Dark mode, or follow system appearance.
+              </p>
+            </div>
+          </div>
+          <Select
+            value={settings.theme}
+            onChange={handleThemeChange}
+            style={{ width: 220 }}
+            options={[
+              { value: "light", label: "Light Mode (ពន្លឺ)" },
+              { value: "dark", label: "Dark Mode (ងងឹត)" },
+              { value: "system", label: "System Mode (តាមប្រព័ន្ធ)" },
+            ]}
+          />
+        </div>
+      </Card>
+
+      {/* Save Action */}
+      <div className="flex flex-wrap items-center gap-4">
+        <Button
+          type="primary"
+          size="large"
+          loading={status.saving}
+          onClick={savePersonal}
+          className="flex items-center gap-2 font-bold px-6 h-11"
+        >
+          <LuSave size={18} />
+          <span>Save Preferences</span>
+        </Button>
+      </div>
+
+      {/* Super Guest Password Verification Modal */}
+      <Modal
+        open={modalOpen}
+        onCancel={() => {
+          setModalOpen(false);
+          setPasswordInput("");
+          setPasswordError("");
+        }}
+        footer={null}
+        centered
+        width={460}
+        styles={{ body: { padding: "8px 4px 16px 4px" } }}
+      >
+        <div className="text-center space-y-4">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-500 ring-8 ring-amber-500/5">
+            <LuKeyRound size={32} />
+          </div>
+
+          <div>
+            <h3 className="m-0 text-lg font-black text-slate-900 dark:text-white">
+              Super Guest Authentication
+            </h3>
+            <p className="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
+              សូមបញ្ចូលពាក្យសម្ងាត់ដើម្បីបើកសិទ្ធិ Super Guest (Unlock All Lessons)
+            </p>
+          </div>
+
+          {passwordError && (
+            <Alert
+              message={passwordError}
+              type="error"
+              showIcon
+              className="text-left text-xs font-semibold rounded-xl"
+            />
+          )}
+
+          <form onSubmit={handleVerifySuperGuestPassword} className="space-y-4 pt-2">
+            <div className="text-left space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Super Guest Password
+              </label>
+              <Input.Password
+                size="large"
+                placeholder="Enter password..."
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  if (passwordError) setPasswordError("");
+                }}
+                className="rounded-xl font-mono text-sm"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                size="large"
+                onClick={() => {
+                  setModalOpen(false);
+                  setPasswordInput("");
+                  setPasswordError("");
+                }}
+                className="rounded-xl font-bold"
+              >
+                បោះបង់ (Cancel)
+              </Button>
+              <Button
+                type="primary"
+                size="large"
+                htmlType="submit"
+                loading={verifying}
+                icon={<LuLockKeyholeOpen size={16} />}
+                className="rounded-xl font-bold bg-amber-500 hover:!bg-amber-600 border-none"
+              >
+                ដោះសោទាំងអស់ (Unlock)
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </div>
   );
 }

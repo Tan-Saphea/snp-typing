@@ -10,7 +10,7 @@ export const curriculumLevels = {
   ],
   km: [
     { level: 1, icon: "ក", title: "ព្យញ្ជនៈ", description: "រៀនវាយព្យញ្ជនៈខ្មែរម្តងមួយក្រុម។" },
-    { level: 2, icon: "កា", title: "ព្យញ្ជនៈ + ស្រៈ", description: "ហាត់វាយព្យញ្ជនៈផ្សំជាមួយស្រៈ។" },
+    { level: 2, icon: "កា", title: "ស្រៈ ជើងអក្សរ និងការផ្សំ", description: "ហាត់វាយស្រៈនិស្ស័យ ជើងអក្សរ (Key J) ស្រៈពេញតួ (ឥ ឦ ឧ ឩ ឪ ឫ ឬ ឭ ឮ ឯ ឰ ឱ ឲ ឳ) និងការផ្សំព្យញ្ជនៈ។" },
     { level: 3, icon: "ពាក្យ", title: "ពាក្យ", description: "វាយពាក្យខ្មែរដែលប្រើជាប្រចាំ។" },
     { level: 4, icon: "។", title: "ប្រយោគ", description: "ហាត់ប្រយោគមានន័យ ដោយផ្តោតលើភាពត្រឹមត្រូវ និងចង្វាក់ថេរ។" },
     { level: 5, icon: "¶", title: "កថាខណ្ឌ", description: "បង្កើនល្បឿនជាមួយកថាខណ្ឌពេញលេញ ដែលមិនមានប្រយោគដដែលៗ។" },
@@ -20,7 +20,7 @@ export const curriculumLevels = {
 
 const curriculumCategories = {
   en: new Set(["keyboard-basics", "easy-words", "syllable-words", "shapes", "school-things", "colors", "sentences", "paragraphs", "stories"]),
-  km: new Set(["khmer-consonants", "khmer-combinations", "khmer-words", "khmer-sentences", "khmer-paragraphs", "khmer-advanced"]),
+  km: new Set(["khmer-consonants", "khmer-combinations", "khmer-coeng", "khmer-independent-vowels", "khmer-words", "khmer-sentences", "khmer-paragraphs", "khmer-advanced"]),
 };
 
 export function isCurriculumLesson(lesson) {

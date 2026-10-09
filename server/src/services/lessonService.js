@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 
 import { Lesson } from "../models/Lesson.js";
 import { Result } from "../models/Result.js";
+import { User } from "../models/User.js";
 import ApiError from "../utils/ApiError.js";
 
 export function lessonToJSON(lesson) {
   const value = lesson.toObject ? lesson.toObject() : { ...lesson };
-  value.id = value._id.toString();
+  value.id = (value._id ?? value.id)?.toString();
   delete value._id;
   delete value.__v;
 
@@ -72,6 +73,9 @@ export function isLessonLocked(prerequisiteLesson, progress) {
 }
 
 export async function assertLessonUnlocked(userId, lesson) {
+  const user = await User.findById(userId).select("preferences role").lean();
+  if (user?.preferences?.superGuest || user?.role === "superadmin" || user?.role === "admin") return;
+
   const prerequisiteId = lesson.prerequisiteLesson?.toString();
   if (!prerequisiteId) return;
 
@@ -98,13 +102,17 @@ export async function listLessonsForUser(user, filters = {}) {
   if (filters.category) query.category = filters.category;
   if (filters.type) query.type = filters.type;
 
-  const lessons = await Lesson.find(query).sort({ language: 1, level: 1, order: 1, category: 1 });
+  const isSuperGuest = Boolean(user?.preferences?.superGuest || user?.role === "superadmin" || user?.role === "admin");
+  const lessons = await Lesson.find(query)
+    .sort({ language: 1, level: 1, order: 1, category: 1 })
+    .lean();
   const prerequisiteIds = lessons
     .map((lesson) => lesson.prerequisiteLesson?.toString())
     .filter(Boolean);
+  const lessonIds = lessons.map((lesson) => (lesson._id ?? lesson.id).toString());
   const progress = await getLessonProgress(
     user.id,
-    [...new Set([...lessons.map((lesson) => lesson.id), ...prerequisiteIds])],
+    [...new Set([...lessonIds, ...prerequisiteIds])],
   );
   const prerequisiteLessons = prerequisiteIds.length
     ? await Lesson.find({ _id: { $in: prerequisiteIds } }).select("title language level order").lean()
@@ -114,13 +122,14 @@ export async function listLessonsForUser(user, filters = {}) {
   );
 
   return lessons.map((lesson) => {
+    const currentId = (lesson._id ?? lesson.id).toString();
     const prerequisiteId = lesson.prerequisiteLesson?.toString();
-    const isLocked = isLessonLocked(prerequisiteId, progress);
+    const isLocked = isSuperGuest ? false : isLessonLocked(prerequisiteId, progress);
     const prerequisite = prerequisitesById.get(prerequisiteId);
 
     return {
       ...lessonToJSON(lesson),
-      progress: progressPayload(progress.get(lesson.id)),
+      progress: progressPayload(progress.get(currentId)),
       isLocked,
       unlockRequirement: isLocked
         ? {
@@ -137,13 +146,16 @@ export async function listLessonsForUser(user, filters = {}) {
 
 export async function getLessonForUser(user, lessonId) {
   if (!mongoose.isValidObjectId(lessonId)) throw new ApiError(400, "INVALID_IDENTIFIER", "The lesson identifier is invalid.");
-  const lesson = await Lesson.findOne({ _id: lessonId, isActive: true, isPublished: true });
+  const lesson = await Lesson.findOne({ _id: lessonId, isActive: true, isPublished: true }).lean();
   if (!lesson) throw new ApiError(404, "LESSON_NOT_FOUND", "The requested lesson was not found.");
   await assertLessonUnlocked(user.id, lesson);
 
-  const nextLesson = await Lesson.findOne({ prerequisiteLesson: lesson.id, isActive: true, isPublished: true }).sort({ level: 1, order: 1 });
+  const nextLesson = await Lesson.findOne({ prerequisiteLesson: lesson._id ?? lesson.id, isActive: true, isPublished: true })
+    .select("title level")
+    .sort({ level: 1, order: 1 })
+    .lean();
   return {
     lesson: lessonToJSON(lesson),
-    nextLesson: nextLesson ? { id: nextLesson.id, title: nextLesson.title, level: nextLesson.level } : null,
+    nextLesson: nextLesson ? { id: (nextLesson._id ?? nextLesson.id).toString(), title: nextLesson.title, level: nextLesson.level } : null,
   };
 }

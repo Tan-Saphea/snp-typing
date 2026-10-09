@@ -20,7 +20,7 @@ export default class AppErrorBoundary extends React.Component {
       return (
         <main className="snp-app-canvas grid min-h-screen place-items-center p-6">
           <section className="snp-result-dialog max-w-lg p-8 text-center" role="alert">
-            <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border-2 border-red-700 bg-red-100 text-2xl text-red-700 shadow-[0_4px_0_0_#fca5a5]">
+            <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-red-200 bg-red-50 text-2xl text-red-600 shadow-md">
               <LuTriangleAlert />
             </div>
             <p className="text-xs font-black uppercase tracking-[0.15em] text-red-600">Application error</p>

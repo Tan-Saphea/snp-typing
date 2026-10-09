@@ -29,3 +29,10 @@ If styling new templates or elements inline, use these configurations:
 * **Radius**: E.g., `rounded-[8px]` or `rounded-[6px]`.
 * **Hard Shadow**: Add a shadow with offset and `0px` blur. E.g., `shadow-[0_6px_0_0_#059669]` or `shadow-[0_4px_0_0_#065f46]`.
 * **Tactile Click Behavior**: Push the button down in active states by applying `hover:-translate-y-0.5 active:translate-y-[4px] active:shadow-none transition-all duration-100`.
+
+## 4. Typography
+The entire application uses **Google Sans** as the official primary font family:
+```css
+font-family: "Google Sans", "Product Sans", "Plus Jakarta Sans", "Khmer OS Battambang", "Segoe UI", sans-serif;
+```
+All new components, headings, and interfaces must consistently maintain this font stack.

@@ -53,9 +53,19 @@ export function applyGuidedInput({ targetText, currentInput, proposedInput, allo
   for (const character of proposedChars.slice(currentChars.length)) {
     if (accepted.length >= targetChars.length) break;
     const expected = targetChars[accepted.length];
-    const isKhmerSpace = language === "km" && expected === " " && [" ", "\u00a0", "\u200b"].includes(character);
-    if (character === expected || isKhmerSpace) accepted.push(expected);
-    else errors += 1;
+    const isKhmerVisibleSpace =
+      language === "km" &&
+      expected === " " &&
+      (character === " " || character === "\u00a0");
+    const isKhmerZeroSpace =
+      language === "km" &&
+      expected === "\u200B" &&
+      character === "\u200B";
+    if (character === expected || isKhmerVisibleSpace || isKhmerZeroSpace) {
+      accepted.push(expected);
+    } else {
+      errors += 1;
+    }
   }
 
   return { acceptedValue: accepted.join(""), errors };

@@ -134,14 +134,16 @@ function isAllowedExternalUrl(value) {
 }
 
 function getIconPath() {
-  if (isDevelopment) {
-    return path.join(__dirname, "../client/public/logo.png");
-  }
+  const candidates = [
+    path.join(__dirname, "../build/icon.png"),
+    path.join(__dirname, "../client/public/logo.png"),
+    path.join(process.resourcesPath, "icon.png"),
+  ];
   const serverRoot = getStandaloneServerRoot();
   if (serverRoot) {
-    return path.join(serverRoot, "public", "logo.png");
+    candidates.unshift(path.join(serverRoot, "public", "logo.png"));
   }
-  return null;
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
 }
 
 function createMainWindow(rendererEntry) {

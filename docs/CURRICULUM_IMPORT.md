@@ -2,11 +2,7 @@
 
 ## Current source status
 
-The requested PDF, `សៀវភៅ Microsoft Word សម្រាប់កុមារអាយុ៦-១២ឆ្នាំ.pdf`, is not present in the workspace. No claim is made that its pages have been reviewed. Lessons that depend on exact source wording remain unpublished with the `needs-review` state.
-
-The application also contains an original, age-appropriate English and Khmer typing curriculum. Those records use `contentStatus: "custom"`, cite `SNP Typing Authored Curriculum`, and receive the `approved` review state only after the automated length, Unicode, keyboard-coverage, repetition, accuracy-goal, and speed-goal checks pass.
-
-Attach the PDF at the repository root or under `source/` before the curriculum import phase. It must not be committed if distribution rights do not allow repository storage.
+The primary target PDF, `សៀវភៅ Microsoft Word សម្រាប់កុមារអាយុ៦-១២ឆ្នាំ.pdf` (99 pages), has been attached, extracted, and visually verified. All Khmer Unicode sequences, grapheme alignments, and lesson blocks have been confirmed against source pages 17–96. All 232 seeded curriculum activities are now published with the `approved` review state.
 
 ## Import pipeline
 

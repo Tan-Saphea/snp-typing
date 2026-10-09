@@ -31,7 +31,7 @@ export async function getUserProgress(userId) {
       isActive: true,
       isPublished: true,
       category: { $ne: "practice-templates" },
-      type: { $nin: ["test", "game", "computer-skill"] },
+      type: { $nin: ["test", "game"] },
     }).sort({ language: 1, level: 1, order: 1 }),
     Result.find({ student: userId }).sort({ completedAt: -1 }).lean(),
     Result.find({ student: userId })
@@ -40,6 +40,8 @@ export async function getUserProgress(userId) {
       .populate("lesson", "title language level")
       .lean(),
   ]);
+  const typingLessons = lessons.filter((lesson) => lesson.type !== "computer-skill");
+  const computerSkillLessons = lessons.filter((lesson) => lesson.type === "computer-skill");
   const bestByLesson = bestResultByLesson(results);
   const passedLessons = new Set(
     results.filter((result) => result.passed).map((result) => result.lesson.toString()),
@@ -64,7 +66,7 @@ export async function getUserProgress(userId) {
   }
 
   function languageSummary(language) {
-    const languageLessons = lessons.filter((lesson) => lesson.language === language);
+    const languageLessons = typingLessons.filter((lesson) => lesson.language === language);
     const completed = languageLessons.filter((lesson) => passedLessons.has(lesson.id)).length;
     const next = languageLessons.find((lesson) => {
       if (passedLessons.has(lesson.id)) return false;
@@ -79,6 +81,24 @@ export async function getUserProgress(userId) {
         languageLessons.length === 0
           ? 0
           : Math.round((completed / languageLessons.length) * 100),
+      continueLesson: next ? lessonToJSON(next) : null,
+    };
+  }
+
+  function computerSkillsSummary() {
+    const completed = computerSkillLessons.filter((lesson) => passedLessons.has(lesson.id)).length;
+    const next = computerSkillLessons.find((lesson) => {
+      if (passedLessons.has(lesson.id)) return false;
+      const prerequisite = lesson.prerequisiteLesson?.toString();
+      return !prerequisite || passedLessons.has(prerequisite);
+    });
+
+    return {
+      completedLessons: completed,
+      totalLessons: computerSkillLessons.length,
+      percent: computerSkillLessons.length === 0
+        ? 0
+        : Math.round((completed / computerSkillLessons.length) * 100),
       continueLesson: next ? lessonToJSON(next) : null,
     };
   }
@@ -102,7 +122,7 @@ export async function getUserProgress(userId) {
   }
 
   function currentLevel(language) {
-    const languageLessons = lessons.filter((lesson) => lesson.language === language);
+    const languageLessons = typingLessons.filter((lesson) => lesson.language === language);
     const next = languageLessons.find((lesson) => !passedLessons.has(lesson.id));
     return next?.level ?? languageLessons.at(-1)?.level ?? 1;
   }
@@ -130,6 +150,7 @@ export async function getUserProgress(userId) {
       en: languageSummary("en"),
       km: languageSummary("km"),
     },
+    computerSkills: computerSkillsSummary(),
     recent: recentResults.map((result) => ({
       id: result._id.toString(),
       lesson: result.lesson

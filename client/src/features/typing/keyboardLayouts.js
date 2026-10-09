@@ -13,7 +13,7 @@ for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") ENGLISH_OUTPUTS[`Key${letter}
 export const KHMER_OUTPUTS = {
   Backquote: ["«", "»", "‍"], Digit1: ["១", "!", "‌"], Digit2: ["២", "ៗ", "@"], Digit3: ["៣", "\"", "៑"], Digit4: ["៤", "៛", "$"],
   Digit5: ["៥", "%", "€"], Digit6: ["៦", "៍", "៙"], Digit7: ["៧", "័", "៚"], Digit8: ["៨", "៏", "*"], Digit9: ["៩", "(", "{"], Digit0: ["០", ")", "}"],
-  Minus: ["ឥ", "៌", "×"], Equal: ["ឲ", "=", "៎"],
+  Minus: ["ឥ", "៌", "×"], Equal: ["ឲ", "៎", "="],
   KeyQ: ["ឆ", "ឈ"], KeyW: ["ឹ", "ឺ"], KeyE: ["េ", "ែ", "ឯ"], KeyR: ["រ", "ឬ", "ឫ"], KeyT: ["ត", "ទ"],
   KeyY: ["យ", "ួ"], KeyU: ["ុ", "ូ"], KeyI: ["ិ", "ី", "ឦ"], KeyO: ["ោ", "ៅ", "ឱ"], KeyP: ["ផ", "ភ", "ឰ"],
   BracketLeft: ["ៀ", "ឿ", "ឩ"], BracketRight: ["ឪ", "ឧ", "ឳ"],
@@ -22,7 +22,7 @@ export const KHMER_OUTPUTS = {
   Quote: ["់", "៉", "ៈ"], Backslash: ["ឮ", "ឭ", "\\"],
   KeyZ: ["ឋ", "ឍ"], KeyX: ["ខ", "ឃ"], KeyC: ["ច", "ជ"], KeyV: ["វ", "េះ"], KeyB: ["ប", "ព"],
   KeyN: ["ន", "ណ"], KeyM: ["ម", "ំ"], Comma: ["ុំ", "ុះ", ","], Period: ["។", "៕", "."], Slash: ["៊", "?", "/"],
-  Space: [" "], Enter: ["\n"],
+  Space: ["\u200B", " "], Enter: ["\n"],
 };
 
 export function getKeyboardOutput(language, code, modifier = false) {
@@ -32,8 +32,19 @@ export function getKeyboardOutput(language, code, modifier = false) {
   return outputs[outputIndex] ?? outputs[0] ?? "";
 }
 
+const keyLookupCache = new Map();
+const MAX_KEY_LOOKUP_CACHE = 1000;
+
 export function findKeyForOutput(language, remainingText) {
   if (!remainingText) return { altGr: false, code: "", shifted: false, output: "" };
+  if (language === "km" && remainingText.startsWith("\u200B")) {
+    return { altGr: false, code: "Space", shifted: false, output: "\u200B" };
+  }
+  const prefix = remainingText.slice(0, 4);
+  const cacheKey = `${language}:${prefix}`;
+  const cached = keyLookupCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   const layout = language === "km" ? KHMER_OUTPUTS : ENGLISH_OUTPUTS;
   const candidates = [];
 
@@ -46,5 +57,13 @@ export function findKeyForOutput(language, remainingText) {
   }
 
   candidates.sort((left, right) => [...right.output].length - [...left.output].length || Number(left.shifted) - Number(right.shifted));
-  return candidates[0] ?? { altGr: false, code: "", shifted: false, output: "" };
+  const result = candidates[0] ?? { altGr: false, code: "", shifted: false, output: "" };
+
+  if (keyLookupCache.size >= MAX_KEY_LOOKUP_CACHE) {
+    const firstKey = keyLookupCache.keys().next().value;
+    keyLookupCache.delete(firstKey);
+  }
+  keyLookupCache.set(cacheKey, result);
+
+  return result;
 }

@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Button,
+  Card,
+  Col,
+  Modal,
+  Progress,
+  Row,
+  Space,
+  Statistic,
+  Tag,
+  Typography,
+} from "antd";
+import {
   LuArrowRight,
-  LuChartBar,
   LuCalendarDays,
+  LuChartBar,
   LuClock3,
   LuDumbbell,
   LuGamepad2,
@@ -13,19 +25,26 @@ import {
   LuSparkles,
   LuTarget,
   LuTimer,
-  LuTrophy,
   LuTrendingUp,
+  LuTrophy,
 } from "react-icons/lu";
-import { Link } from "../components/NextRouter.jsx";
 
 import { PageError, PageLoader } from "../components/AsyncState.jsx";
-import LearningCategoryCard, { learningCardPalette, learningCardPatterns } from "../components/LearningCategoryCard.jsx";
+import LearningCategoryCard, {
+  learningCardPalette,
+  learningCardPatterns,
+} from "../components/LearningCategoryCard.jsx";
+import MetricCard from "../components/MetricCard.jsx";
+import { Link } from "../components/NextRouter.jsx";
+import PageHero from "../components/PageHero.jsx";
 import ProgressBar from "../components/ProgressBar.jsx";
 import Stars from "../components/Stars.jsx";
 import { curriculumLevels } from "../data/curriculum.js";
 import { getApiErrorMessage } from "../services/api.js";
 import { getMyProgress } from "../services/progressService.js";
 import { useAuthStore } from "../stores/authStore.js";
+
+const { Text, Title } = Typography;
 
 function formatPracticeTime(seconds) {
   const minutes = Math.round(seconds / 60);
@@ -34,63 +53,97 @@ function formatPracticeTime(seconds) {
   return hours ? `${hours}h ${remaining}m` : `${remaining}m`;
 }
 
-function StatCard({ accent, icon: Icon, label, note, value }) {
-  return (
-    <article className="snp-card snp-stat-card flex min-w-0 items-center gap-4 p-4 sm:p-5">
-      <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl border-2 border-slate-900 text-xl shadow-[0_3px_0_0_#cbd5e1] ${accent}`}>
-        <Icon aria-hidden="true" size={24} />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">{label}</p>
-        <div className="mt-1 flex items-end gap-2">
-          <p className="text-2xl font-black tracking-[-0.04em] text-ink">{value}</p>
-          {note && <span className="mb-1 hidden text-[11px] font-bold text-slate-400 2xl:inline">{note}</span>}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function LearningCard({ language, summary }) {
   const isKhmer = language === "km";
   const levelNumber = summary.continueLesson?.level ?? 1;
-  const level = curriculumLevels[language].find((item) => item.level === levelNumber);
+  const level = curriculumLevels[language]?.find((item) => item.level === levelNumber);
   const Icon = isKhmer ? LuLanguages : LuKeyboard;
 
   return (
     <LearningCategoryCard
-      accent={isKhmer ? "#a94cf4" : "#3f86f7"}
+      accent={isKhmer ? "#722ed1" : "#1677ff"}
       actionLabel={summary.continueLesson ? "Continue lesson" : "View lessons"}
       badge={isKhmer ? "ខ្មែរ" : "EN"}
-      deep={isKhmer ? "#7230b2" : "#1d5fc5"}
-      description={summary.continueLesson ? `Continue “${summary.continueLesson.title}” and build a steady rhythm.` : level?.description}
-      href={summary.continueLesson ? `/lessons/${summary.continueLesson.id}` : `/${isKhmer ? "khmer" : "english"}`}
+      deep={isKhmer ? "#391085" : "#0958d9"}
+      description={
+        summary.continueLesson
+          ? `Continue “${summary.continueLesson.title}” and build steady muscle memory.`
+          : level?.description
+      }
+      href={
+        summary.continueLesson
+          ? `/lessons/${summary.continueLesson.id}`
+          : `/${isKhmer ? "khmer" : "english"}`
+      }
       pattern={isKhmer ? "checker" : "stripes"}
       subtitle={`Level ${levelNumber} · ${level?.title}`}
       title={isKhmer ? "Khmer Typing" : "English Typing"}
       visual={<Icon />}
     >
-      <div className="snp-learning-card-progress"><ProgressBar color="bg-slate-900" value={summary.percent} /></div>
+      <div className="mt-2">
+        <ProgressBar
+          strokeColor={isKhmer ? "#722ed1" : "#1677ff"}
+          label="Track Progress"
+          value={summary.percent}
+        />
+      </div>
     </LearningCategoryCard>
   );
 }
 
 const exploreAreas = [
-  { title: "Practice", subtitle: "ហាត់វាយអក្សរ", description: "Warm up with words, sentences, paragraphs, or your own text.", href: "/practice", icon: LuDumbbell },
-  { title: "Typing Test", subtitle: "តេស្តវាយអក្សរ", description: "Measure your speed and accuracy in focused timed sessions.", href: "/typing-test", icon: LuTimer },
-  { title: "Typing Games", subtitle: "ល្បែងវាយអក្សរ", description: "Turn accurate English and Khmer typing into points and streaks.", href: "/games", icon: LuGamepad2 },
-  { title: "Computer Skills", subtitle: "ជំនាញកុំព្យូទ័រ", description: "Practice typing, editing, and Microsoft Word formatting tools.", href: "/computer-skills", icon: LuMonitor },
-  { title: "My Progress", subtitle: "វឌ្ឍនភាពរបស់ខ្ញុំ", description: "Review your speed, accuracy, stars, streak, and recent activity.", href: "/progress", icon: LuChartBar },
-  { title: "Leaderboard", subtitle: "តារាងពិន្ទុ", description: "Celebrate effort, speed, accuracy, and stars with other learners.", href: "/leaderboard", icon: LuTrophy },
+  {
+    title: "Practice",
+    subtitle: "ហាត់វាយអក្សរ",
+    description: "Warm up with words, sentences, paragraphs, or your own magic custom text.",
+    href: "/practice",
+    icon: LuDumbbell,
+  },
+  {
+    title: "Typing Test",
+    subtitle: "តេស្តវាយអក្សរ",
+    description: "Measure your speed and accuracy in focused 30s to 5min timed sessions.",
+    href: "/typing-test",
+    icon: LuTimer,
+  },
+  {
+    title: "Typing Games",
+    subtitle: "ល្បែងវាយអក្សរ",
+    description: "Turn accurate English and Khmer typing into points, streaks, and stars.",
+    href: "/games",
+    icon: LuGamepad2,
+  },
+  {
+    title: "Computer Skills",
+    subtitle: "ជំនាញកុំព្យូទ័រ & ឌីជីថល",
+    description: "240 bilingual quiz questions, shortcuts speed arena, and hardware explorer games.",
+    href: "/computer-skills",
+    icon: LuMonitor,
+  },
+  {
+    title: "My Progress",
+    subtitle: "វឌ្ឍនភាពរបស់ខ្ញុំ",
+    description: "Review your speed trends, accuracy, star counts, and detailed history.",
+    href: "/progress",
+    icon: LuChartBar,
+  },
+  {
+    title: "Leaderboard",
+    subtitle: "តារាងពិន្ទុ",
+    description: "Celebrate effort, speed, accuracy, and stars with other learners.",
+    href: "/leaderboard",
+    icon: LuTrophy,
+  },
 ];
 
 function ExploreCard({ area, index }) {
   const color = learningCardPalette[(index + 2) % learningCardPalette.length];
   const Icon = area.icon;
+
   return (
     <LearningCategoryCard
       accent={color.accent}
-      actionLabel="Learn now"
+      actionLabel="Open activity"
       badge={String(index + 3).padStart(2, "0")}
       deep={color.deep}
       description={area.description}
@@ -107,13 +160,19 @@ export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const [state, setState] = useState({ loading: true, progress: null, error: "" });
   const [showWelcome, setShowWelcome] = useState(false);
+
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: "" }));
-    try { setState({ loading: false, progress: await getMyProgress(), error: "" }); }
-    catch (error) { setState({ loading: false, progress: null, error: getApiErrorMessage(error) }); }
+    try {
+      setState({ loading: false, progress: await getMyProgress(), error: "" });
+    } catch (error) {
+      setState({ loading: false, progress: null, error: getApiErrorMessage(error) });
+    }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (user && sessionStorage.getItem("snp-just-logged-in") === "true") {
@@ -122,31 +181,6 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  if (showWelcome) {
-    return (
-      <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-5 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="snp-modal-card w-full max-w-md p-7 text-center animate-in zoom-in-95 duration-200">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border-2 border-slate-900 bg-emerald-200 text-3xl text-emerald-900 shadow-[0_4px_0_0_#34d399]">
-            👋
-          </div>
-          <h2 className="mt-5 text-2xl font-black text-ink">Welcome back, {user?.firstName || user?.username}!</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            Ready to improve your typing speed today? Confident typing in English and Khmer starts with one key at a time.
-          </p>
-          <div className="mt-6">
-            <button
-              className="snp-button-primary w-full py-3 text-base flex justify-center items-center gap-2"
-              onClick={() => setShowWelcome(false)}
-              type="button"
-            >
-              <LuSparkles /> Let's Practice!
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (state.loading) return <PageLoader message="Preparing your dashboard…" />;
   if (state.error) return <PageError message={state.error} onRetry={load} />;
 
@@ -154,122 +188,217 @@ export default function DashboardPage() {
   const maxMinutes = Math.max(...progress.weekly.map((day) => day.minutes), 1);
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Welcome Banner */}
-      <section className="snp-dashboard-hero relative overflow-hidden p-6 text-white sm:p-8">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border-[44px] border-primary-400/20" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-              <LuSparkles />Student Dashboard
-            </p>
-            <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-              Hello, {user?.firstName || user?.username}!
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-              Ready to improve your typing today? Continue a lesson and keep your learning streak moving.
-            </p>
-          </div>
-          <div className="flex w-fit items-center gap-3 rounded-2xl border-2 border-white/20 bg-white px-4 py-3 text-slate-900 shadow-[0_5px_0_0_#34d399]">
-            <span className="grid h-10 w-10 place-items-center rounded-xl border border-amber-300 bg-amber-100 text-amber-700">
+    <div className="space-y-8">
+      {/* Welcome Hero Banner */}
+      <PageHero
+        badges={[
+          { icon: LuSparkles, label: `${progress.stats.dailyStreak} day streak` },
+          { icon: LuTrophy, label: `${progress.stats.stars} stars earned` },
+        ]}
+        description="Ready to improve your typing today? Complete a lesson, sharpen your accuracy, and watch your speed grow step by step."
+        eyebrow="Student Dashboard"
+        icon={LuSparkles}
+        title={`Hello, ${user?.firstName || user?.username}!`}
+        tone="emerald"
+        actions={
+          <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 backdrop-blur-md border border-white/20 text-white">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#fa8c16] text-white">
               <LuTrophy size={20} />
-            </span>
+            </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Stars earned</p>
-              <p className="text-xl font-black text-ink">{progress.stats.stars}</p>
+              <p className="m-0 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                Stars Earned
+              </p>
+              <p className="m-0 text-xl font-black text-white">{progress.stats.stars}</p>
             </div>
           </div>
-        </div>
-      </section>
+        }
+      />
 
-      {/* Stats Cards grid */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard accent="bg-sky-100 text-sky-700" icon={LuClock3} label="Typing Time" note="total practice" value={formatPracticeTime(progress.stats.totalPracticeSeconds)} />
-        <StatCard accent="bg-emerald-100 text-emerald-700" icon={LuGauge} label="English WPM" note="personal best" value={Math.round(progress.stats.bestWpm)} />
-        <StatCard accent="bg-violet-100 text-violet-700" icon={LuKeyboard} label="Khmer CPM" note="personal best" value={Math.round(progress.stats.bestCpm)} />
-        <StatCard accent="bg-amber-100 text-amber-700" icon={LuTarget} label="Accuracy" note="average" value={`${Math.round(progress.stats.averageAccuracy)}%`} />
-      </section>
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          icon={LuClock3}
+          label="Typing Time"
+          note="Total practice time"
+          tone="sky"
+          value={formatPracticeTime(progress.stats.totalPracticeSeconds)}
+        />
+        <MetricCard
+          icon={LuGauge}
+          label="English WPM"
+          note="Personal best speed"
+          tone="emerald"
+          value={Math.round(progress.stats.bestWpm)}
+        />
+        <MetricCard
+          icon={LuKeyboard}
+          label="Khmer CPM"
+          note="Grapheme-aware best"
+          tone="violet"
+          value={Math.round(progress.stats.bestCpm)}
+        />
+        <MetricCard
+          icon={LuTarget}
+          label="Average Accuracy"
+          note="Target 70%+"
+          tone="amber"
+          value={`${Math.round(progress.stats.averageAccuracy)}%`}
+        />
+      </div>
 
-      <section>
+      {/* Learning Modules Grid */}
+      <div>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-primary-600">Learning Library</p><h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Choose what to learn</h2></div>
-          <p className="max-w-md text-sm font-semibold leading-6 text-slate-500">Typing lessons and computer skills unlock step by step. Practice, tests, and games stay open anytime.</p>
+          <div>
+            <p className="m-0 text-xs font-black uppercase tracking-wider text-[#52c41a]">
+              Learning Library
+            </p>
+            <h2 className="m-0 mt-1 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              Choose what to learn
+            </h2>
+          </div>
+          <p className="m-0 max-w-md text-sm font-medium text-slate-500 dark:text-slate-400">
+            Lessons and computer skills unlock in sequence. Practice, tests, and games stay open anytime.
+          </p>
         </div>
-        <div className="snp-learning-grid">
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <LearningCard language="en" summary={progress.languages.en} />
           <LearningCard language="km" summary={progress.languages.km} />
-          {exploreAreas.map((area, index) => <ExploreCard area={area} index={index} key={area.href} />)}
+          {exploreAreas.map((area, index) => (
+            <ExploreCard area={area} index={index} key={area.href} />
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Recent Activity & Chart Cards */}
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="snp-card min-w-0 p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Latest activity</p>
-              <h2 className="mt-1 text-xl font-black">Recent Lessons</h2>
-            </div>
-            <Link className="inline-flex items-center gap-1 text-sm font-black text-primary-700 hover:underline" to="/progress">
-              View progress <LuArrowRight />
+      {/* Recent Activity & Weekly Rhythm Cards */}
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card
+          variant="outlined"
+          title={<span className="text-base font-black">Recent Activity</span>}
+          extra={
+            <Link to="/progress" className="font-bold text-xs text-[#52c41a] flex items-center gap-1 hover:underline">
+              <span>View full history</span>
+              <LuArrowRight size={14} />
             </Link>
-          </div>
+          }
+          className="rounded-2xl shadow-sm dark:border-slate-800"
+          styles={{ body: { padding: "16px 24px" } }}
+        >
           {progress.recent.length ? (
-            <div className="mt-4 divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {progress.recent.slice(0, 4).map((item) => (
-                <div className="flex items-center gap-3 py-4 sm:gap-4" key={item.id}>
-                  <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border-2 border-slate-900 shadow-[0_3px_0_0_#cbd5e1] ${
-                    item.lesson?.language === "km" ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700"
-                  }`}>
-                    {item.lesson?.language === "km" ? <LuLanguages /> : <LuKeyboard />}
+                <div className="flex items-center gap-4 py-3.5" key={item.id}>
+                  <div
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+                      item.lesson?.language === "km"
+                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    }`}
+                  >
+                    {item.lesson?.language === "km" ? <LuLanguages size={20} /> : <LuKeyboard size={20} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black text-ink">{item.lesson?.title || "Archived lesson"}</p>
-                    <p className="mt-1 flex items-center gap-1 truncate text-xs font-semibold text-slate-500">
-                      <LuCalendarDays className="shrink-0" />
-                      {new Date(item.completedAt).toLocaleDateString()} · {item.lesson?.language === "km" ? `${Math.round(item.cpm)} CPM` : `${Math.round(item.wpm)} WPM`}
+                    <p className="m-0 truncate font-black text-slate-900 dark:text-white">
+                      {item.lesson?.title || "Archived lesson"}
+                    </p>
+                    <p className="m-0 mt-0.5 flex items-center gap-1 text-xs text-slate-400 font-medium">
+                      <LuCalendarDays size={13} />
+                      <span>{new Date(item.completedAt).toLocaleDateString()}</span>
+                      <span>·</span>
+                      <span className="font-bold text-slate-600 dark:text-slate-300">
+                        {item.lesson?.language === "km" ? `${Math.round(item.cpm)} CPM` : `${Math.round(item.wpm)} WPM`}
+                      </span>
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <Stars count={item.stars} />
-                    <p className="mt-1 text-xs font-bold text-slate-500">{Math.round(item.accuracy)}%</p>
+                    <Stars count={item.stars} size={14} />
+                    <p className="m-0 mt-0.5 text-xs font-black text-[#52c41a]">
+                      {Math.round(item.accuracy)}%
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
-              Complete your first lesson to see it here.
-            </p>
-          )}
-        </div>
-        
-        <div className="snp-card p-5 sm:p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Last 7 days</p>
-              <h2 className="mt-1 text-xl font-black">Weekly Progress</h2>
-              <p className="mt-1 text-sm text-slate-500">Practice minutes per day</p>
+            <div className="py-10 text-center text-sm font-medium text-slate-400">
+              Complete your first lesson to see your achievements here!
             </div>
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-800">
-              <LuTrendingUp />
-            </span>
-          </div>
-          <div className="mt-7 flex h-48 items-end justify-between gap-2" role="img" aria-label="Weekly practice minutes bar chart">
+          )}
+        </Card>
+
+        {/* Weekly Chart */}
+        <Card
+          variant="outlined"
+          title={<span className="text-base font-black">Weekly Rhythm</span>}
+          extra={<LuTrendingUp className="text-[#52c41a]" size={18} />}
+          className="rounded-2xl shadow-sm dark:border-slate-800"
+          styles={{ body: { padding: "20px 24px" } }}
+        >
+          <p className="m-0 text-xs font-medium text-slate-400 mb-6">
+            Practice minutes per day (Last 7 days)
+          </p>
+          <div
+            className="flex h-44 items-end justify-between gap-2"
+            role="img"
+            aria-label="Weekly practice minutes chart"
+          >
             {progress.weekly.map((day) => (
-              <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2" key={day.date} title={`${day.label}: ${day.minutes} minutes`}>
-                <span className="text-[10px] font-bold text-slate-500 sm:text-xs">{day.minutes || ""}</span>
-                <div 
-                  className="w-full max-w-10 rounded-t-xl border-2 border-slate-900 bg-emerald-400 transition-all" 
-                  style={{ height: `${Math.max(day.minutes ? 12 : 4, (day.minutes / maxMinutes) * 130)}px` }} 
+              <div
+                className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
+                key={day.date}
+                title={`${day.label}: ${day.minutes} minutes`}
+              >
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                  {day.minutes || ""}
+                </span>
+                <div
+                  className="w-full max-w-9 rounded-t-lg bg-gradient-to-t from-[#2e7d32] to-[#52c41a] transition-all"
+                  style={{
+                    height: `${Math.max(day.minutes ? 14 : 4, (day.minutes / maxMinutes) * 120)}px`,
+                  }}
                 />
-                <span className="text-[10px] font-bold text-slate-500 sm:text-xs">{day.label.slice(0, 2)}</span>
+                <span className="text-[10px] font-bold uppercase text-slate-400">
+                  {day.label.slice(0, 2)}
+                </span>
               </div>
             ))}
           </div>
+        </Card>
+      </div>
+
+      {/* Welcome Modal Popup */}
+      <Modal
+        open={showWelcome}
+        onCancel={() => setShowWelcome(false)}
+        footer={[
+          <Button
+            key="start"
+            type="primary"
+            size="large"
+            onClick={() => setShowWelcome(false)}
+            className="w-full font-bold flex items-center justify-center gap-2 h-11"
+          >
+            <LuSparkles />
+            <span>Let's Practice!</span>
+          </Button>,
+        ]}
+        centered
+        width={420}
+      >
+        <div className="text-center pt-2">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 text-3xl text-[#52c41a] mb-4">
+            <LuSparkles size={28} />
+          </div>
+          <h3 className="m-0 text-2xl font-black text-slate-900 dark:text-white">
+            Welcome back, {user?.firstName || user?.username}!
+          </h3>
+          <p className="m-0 mt-2 text-sm text-slate-500 leading-relaxed">
+            Ready to build your typing confidence today? One accurate key at a time leads to fluent speed.
+          </p>
         </div>
-      </section>
+      </Modal>
     </div>
   );
 }

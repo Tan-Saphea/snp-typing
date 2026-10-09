@@ -1,34 +1,71 @@
-import { LuKeyboard, LuRefreshCw, LuTriangleAlert } from "react-icons/lu";
+import { Alert, Button, Card, Empty, Result, Spin } from "antd";
+import { LuKeyboard, LuRefreshCw } from "react-icons/lu";
 
 export function PageLoader({ message = "Loading your lessons…" }) {
   return (
-    <div className="snp-card grid min-h-72 place-items-center overflow-hidden p-8" role="status">
-      <div className="text-center">
-        <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl border-2 border-slate-900 bg-primary-50 shadow-[0_4px_0_0_#7167f6]"><LuKeyboard className="text-primary-700" size={27} /><span className="absolute -inset-2 animate-spin rounded-[1.4rem] border-2 border-transparent border-t-primary-500" /></div>
-        <p className="mt-5 font-black text-slate-700">{message}</p>
-        <p className="mt-1 text-xs font-bold text-slate-400">Getting your learning space ready</p>
+    <Card
+      variant="outlined"
+      className="grid min-h-[300px] place-items-center rounded-2xl shadow-sm dark:border-slate-800"
+    >
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <Spin size="large" />
+        <p className="m-0 mt-4 text-base font-black text-slate-800 dark:text-slate-200">
+          {message}
+        </p>
+        <p className="m-0 mt-1 text-xs font-semibold text-slate-400">
+          Getting your learning space ready
+        </p>
       </div>
-    </div>
+    </Card>
   );
 }
 
 export function PageError({ message, onRetry }) {
   return (
-    <div className="snp-card border-red-700 bg-red-50 p-8 text-center shadow-[0_5px_0_0_#ef4444]" role="alert">
-      <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border-2 border-red-700 bg-red-100 text-xl font-black text-red-700 shadow-[0_3px_0_0_#fca5a5]"><LuTriangleAlert aria-hidden="true" /></div>
-      <h2 className="mt-4 text-xl font-black text-red-900">We could not load this page</h2>
-      <p className="mx-auto mt-2 max-w-lg text-red-700">{message}</p>
-      {onRetry && <button className="snp-button-secondary mt-5" onClick={onRetry} type="button"><LuRefreshCw />Try again</button>}
-    </div>
+    <Card
+      variant="outlined"
+      className="rounded-2xl border-red-200 bg-red-50/50 shadow-sm dark:border-red-900/40 dark:bg-red-950/20"
+    >
+      <Result
+        status="error"
+        title={<span className="font-black text-red-900 dark:text-red-300">We could not load this page</span>}
+        subTitle={<span className="text-red-700 dark:text-red-400 font-medium">{message}</span>}
+        extra={
+          onRetry ? (
+            <Button
+              type="primary"
+              danger
+              onClick={onRetry}
+              className="flex items-center gap-2 mx-auto font-bold"
+            >
+              <LuRefreshCw />
+              <span>Try again</span>
+            </Button>
+          ) : undefined
+        }
+      />
+    </Card>
   );
 }
 
-export function EmptyState({ title, message }) {
+export function EmptyState({ title = "No data found", message = "Nothing to display here yet." }) {
   return (
-    <div className="snp-card p-10 text-center">
-      <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border-2 border-slate-900 bg-slate-100 text-2xl text-slate-600 shadow-[0_3px_0_0_#cbd5e1]"><LuKeyboard aria-hidden="true" /></div>
-      <h2 className="mt-4 text-xl font-black text-ink">{title}</h2>
-      <p className="mx-auto mt-2 max-w-lg text-slate-600">{message}</p>
-    </div>
+    <Card
+      variant="outlined"
+      className="rounded-2xl p-6 text-center shadow-sm dark:border-slate-800"
+    >
+      <Empty
+        description={
+          <div>
+            <h3 className="m-0 text-base font-black text-slate-800 dark:text-slate-200">
+              {title}
+            </h3>
+            <p className="m-0 mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {message}
+            </p>
+          </div>
+        }
+      />
+    </Card>
   );
 }

@@ -82,6 +82,11 @@ async function seedLessonRecords(actor) {
     await retired.save();
   }
 
+  await Lesson.updateMany(
+    { slug: { $in: Array.from(currentSlugs) } },
+    { $inc: { order: 1000 } }
+  );
+
   for (const lessonData of seedLessons) {
     const { prerequisiteSlug, unlockTrack, ...lessonFields } = lessonData;
     const track = unlockTrack ?? `${lessonData.language}:${lessonData.category}:${lessonData.level}`;

@@ -1,48 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  LuArrowLeft,
-  LuCircleAlert,
-  LuEye,
-  LuEyeOff,
-  LuKeyboard,
-  LuLanguages,
-  LuLockKeyhole,
-  LuShieldCheck,
-  LuSparkles,
-  LuUser,
-  LuUserPlus,
-} from "react-icons/lu";
+import { Alert, Button, Dropdown, Form, Input } from "antd";
+import { LuCheck, LuLock, LuMonitor, LuMoon, LuSun, LuUser } from "react-icons/lu";
 
 import { Link, Navigate, useNavigate } from "../components/NextRouter.jsx";
-import Brand from "../components/Brand.jsx";
 import { apiConfigurationError } from "../services/api.js";
 import { useAuthStore } from "../stores/authStore.js";
-
-const initialProfile = {
-  firstName: "",
-  lastName: "",
-  khmerName: "",
-  gender: "unspecified",
-  username: "",
-  password: "",
-  confirmPassword: "",
-};
+import { useTheme } from "../theme/ThemeContext.jsx";
 
 const usernamePattern = /^[a-z0-9._-]+$/;
-
-function validateProfile(profile) {
-  const username = profile.username.trim().toLowerCase();
-
-  if (!profile.firstName.trim()) return "Enter your first name.";
-  if (username.length < 3) return "Username: use at least 3 characters.";
-  if (!usernamePattern.test(username)) return "Username: use only letters, numbers, dots, underscores, or hyphens.";
-  if (profile.password.length < 8) return "Password: use at least 8 characters.";
-  if (!/[a-z]/.test(profile.password)) return "Password: include at least one lowercase letter.";
-  if (!/[A-Z]/.test(profile.password)) return "Password: include at least one uppercase letter.";
-  if (!/[0-9]/.test(profile.password)) return "Password: include at least one number.";
-  if (profile.password !== profile.confirmPassword) return "The passwords do not match.";
-  return "";
-}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -50,41 +15,62 @@ export default function RegisterPage() {
   const error = useAuthStore((state) => state.error);
   const register = useAuthStore((state) => state.register);
   const clearError = useAuthStore((state) => state.clearError);
-  const [profile, setProfile] = useState(initialProfile);
+
+  const [form] = Form.useForm();
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => clearError, [clearError]);
+
   if (status === "authenticated") return <Navigate to="/" replace />;
 
-  function updateField(event) {
-    clearError();
-    setFormError("");
-    const value = event.target.name === "username"
-      ? event.target.value.toLowerCase()
-      : event.target.value;
-    setProfile((current) => ({ ...current, [event.target.name]: value }));
+  function handleNameChange(e) {
+    const val = e.target.value;
+    const currentUsername = form.getFieldValue("username");
+    // If username hasn't been manually typed yet, auto-suggest from name
+    if (!currentUsername && val) {
+      // Convert English characters to clean username; if Khmer, keep blank for user to choose
+      const sanitized = val
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ".")
+        .replace(/[^a-z0-9._-]/g, "");
+      if (sanitized && sanitized.length >= 3) {
+        form.setFieldsValue({ username: sanitized });
+      }
+    }
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function handleSubmit(values) {
+    setFormError("");
+    clearError();
 
-    const validationError = validateProfile(profile);
-    if (validationError) {
-      setFormError(validationError);
+    const username = values.username.trim().toLowerCase();
+    if (values.password.length < 6) {
+      setFormError("Password must be at least 6 characters (យ៉ាងតិច ៦ ខ្ទង់).");
+      return;
+    }
+
+    const recoveryKey = (values.securityAnswer || "").trim();
+    if (
+      recoveryKey !== "Admin.snpis@2013" &&
+      recoveryKey.toLowerCase() !== "admin.snpis@2013"
+    ) {
+      setFormError(
+        "Recovery Key មិនត្រឹមត្រូវទេ! សូមទាក់ទងលោកគ្រូ ឬអ្នកគ្រូ។ (Invalid Recovery Key. Please contact your instructor.)",
+      );
       return;
     }
 
     setIsSubmitting(true);
     const registration = {
-      ...profile,
-      firstName: profile.firstName.trim(),
-      lastName: profile.lastName.trim(),
-      khmerName: profile.khmerName.trim(),
-      username: profile.username.trim().toLowerCase(),
+      name: values.name.trim(),
+      username,
+      password: values.password,
+      securityQuestion: "Recovery Key",
+      securityAnswer: recoveryKey,
     };
-    delete registration.confirmPassword;
+
     const registered = await register(registration);
     setIsSubmitting(false);
 
@@ -94,58 +80,227 @@ export default function RegisterPage() {
     }
   }
 
+  const { theme, resolvedTheme, systemDark, setTheme } = useTheme();
+
+  const themeMenuItems = [
+    {
+      key: "light",
+      label: (
+        <div className="flex items-center justify-between gap-4 px-1 py-1 font-bold">
+          <span className="flex items-center gap-2">
+            <LuSun size={15} className="text-amber-500" />
+            <span>Light Mode</span>
+          </span>
+          {theme === "light" && <LuCheck size={14} className="text-[#52c41a]" />}
+        </div>
+      ),
+      onClick: () => setTheme("light"),
+    },
+    {
+      key: "dark",
+      label: (
+        <div className="flex items-center justify-between gap-4 px-1 py-1 font-bold">
+          <span className="flex items-center gap-2">
+            <LuMoon size={15} className="text-indigo-400" />
+            <span>Dark Mode</span>
+          </span>
+          {theme === "dark" && <LuCheck size={14} className="text-[#52c41a]" />}
+        </div>
+      ),
+      onClick: () => setTheme("dark"),
+    },
+    {
+      key: "system",
+      label: (
+        <div className="flex items-center justify-between gap-4 px-1 py-1 font-bold">
+          <span className="flex items-center gap-2">
+            <LuMonitor size={15} className="text-slate-400" />
+            <span>System ({systemDark ? "Dark" : "Light"})</span>
+          </span>
+          {theme === "system" && <LuCheck size={14} className="text-[#52c41a]" />}
+        </div>
+      ),
+      onClick: () => setTheme("system"),
+    },
+  ];
+
   return (
-    <main className="snp-auth-page min-h-screen p-3 sm:p-5 lg:p-8">
-      <div className="snp-auth-shell mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-7xl overflow-hidden sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.84fr_1.16fr]">
-        <section className="snp-auth-visual relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
-          <Brand inverse />
-          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full border-[42px] border-violet-400/30" />
-          <div className="pointer-events-none absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-emerald-400/20 blur-2xl" />
-          <div className="relative z-10">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-emerald-200 backdrop-blur"><LuSparkles /> Start your path</span>
-            <h1 className="mt-6 text-5xl font-black leading-[1.04] tracking-[-0.04em] text-white">Your account.<br /><span className="text-emerald-300">Your progress.</span></h1>
-            <p className="mt-5 max-w-md font-medium leading-7 text-slate-300">Create a private learner account, complete lessons in order, and keep every result in one place.</p>
-            <div className="mt-7 grid gap-3">
-              <span className="inline-flex items-center gap-3 font-bold"><LuKeyboard className="text-emerald-300" />English and Khmer typing paths</span>
-              <span className="inline-flex items-center gap-3 font-bold"><LuLanguages className="text-emerald-300" />Step-by-step lesson unlocking</span>
-              <span className="inline-flex items-center gap-3 font-bold"><LuShieldCheck className="text-emerald-300" />Progress saved to your account</span>
-            </div>
+    <main className="relative min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 flex items-center justify-center">
+      <div className="absolute top-4 right-4 z-10">
+        <Dropdown menu={{ items: themeMenuItems }} trigger={["click"]} placement="bottomRight">
+          <Button
+            shape="circle"
+            icon={
+              resolvedTheme === "dark" ? (
+                <LuMoon size={16} className="text-indigo-400" />
+              ) : (
+                <LuSun size={16} className="text-amber-500" />
+              )
+            }
+            className="flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+            aria-label="Toggle theme mode"
+          />
+        </Dropdown>
+      </div>
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-sm">
+          {/* Logo & Header */}
+          <div className="text-center mb-6">
+            <img
+              src="/logo.png"
+              alt="SNP Typing"
+              className="h-20 w-auto mx-auto mb-3 object-contain"
+            />
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white m-0">
+              Create Account
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 m-0">
+              ចុះឈ្មោះគណនីថ្មី ដើម្បីចាប់ផ្តើមរៀនវាយអក្សរ
+            </p>
           </div>
-          <p className="relative z-10 text-sm font-semibold text-slate-400">Pass each lesson with the required accuracy to unlock the next one.</p>
-        </section>
 
-        <section className="snp-auth-form-panel flex items-center justify-center p-5 sm:p-10 lg:p-12">
-          <div className="w-full max-w-2xl">
-            <div className="mb-7 flex items-center justify-between gap-4">
-              <div className="lg:hidden"><Brand /></div>
-              <Link className="inline-flex items-center gap-2 text-sm font-black text-primary-700 hover:underline" to="/login"><LuArrowLeft />Sign in</Link>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-emerald-800"><LuUserPlus /> New learner</span>
-            <h2 className="mt-4 text-4xl font-black tracking-[-0.035em] text-ink sm:text-5xl">Create your account</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">Choose your own username and a strong password. You will be signed in immediately.</p>
+          {apiConfigurationError && (
+            <Alert
+              title="Configuration Error"
+              description={apiConfigurationError}
+              type="warning"
+              showIcon
+              className="mb-5 rounded-lg"
+            />
+          )}
 
-            {apiConfigurationError && <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900" role="alert"><LuCircleAlert className="mt-0.5 shrink-0" size={19} /><span>{apiConfigurationError}</span></div>}
-            {(formError || error) && <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800" role="alert"><LuCircleAlert className="mt-0.5 shrink-0" size={19} /><span>{formError || error}</span></div>}
+          {(formError || error) && (
+            <Alert
+              title={formError || error}
+              type="error"
+              showIcon
+              closable
+              onClose={() => {
+                setFormError("");
+                clearError();
+              }}
+              className="mb-5 rounded-lg"
+            />
+          )}
 
-            <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div><label className="snp-label" htmlFor="firstName">First name</label><input autoComplete="given-name" className="snp-input" id="firstName" maxLength={80} name="firstName" onChange={updateField} placeholder="Sovann" required value={profile.firstName} /></div>
-                <div><label className="snp-label" htmlFor="lastName">Last name <span className="font-semibold text-slate-400">(optional)</span></label><input autoComplete="family-name" className="snp-input" id="lastName" maxLength={80} name="lastName" onChange={updateField} placeholder="Kim" value={profile.lastName} /></div>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div><label className="snp-label" htmlFor="khmerName">Khmer name <span className="font-semibold text-slate-400">(optional)</span></label><input className="snp-input" id="khmerName" lang="km" maxLength={160} name="khmerName" onChange={updateField} placeholder="សុវណ្ណ គឹម" value={profile.khmerName} /></div>
-                <div><label className="snp-label" htmlFor="gender">Gender</label><select className="snp-input" id="gender" name="gender" onChange={updateField} value={profile.gender}><option value="unspecified">Prefer not to say</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option></select></div>
-              </div>
-              <div><label className="snp-label" htmlFor="username">Username</label><div className="relative"><LuUser className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input autoCapitalize="none" autoComplete="username" className="snp-input pl-11" id="username" maxLength={64} minLength={3} name="username" onChange={updateField} pattern={"[a-z0-9._\\-]+"} placeholder="sovann.kim" required spellCheck="false" title="Use lowercase letters, numbers, dots, underscores, or hyphens." value={profile.username} /></div><p className="mt-1.5 text-xs font-semibold text-slate-500">Lowercase letters, numbers, dots, underscores, or hyphens.</p></div>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div><label className="snp-label" htmlFor="password">Password</label><div className="relative"><LuLockKeyhole className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input autoComplete="new-password" className="snp-input px-11" id="password" maxLength={128} minLength={8} name="password" onChange={updateField} placeholder="Create a password" required type={showPassword ? "text" : "password"} value={profile.password} /><button aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-800" onClick={() => setShowPassword((value) => !value)} type="button">{showPassword ? <LuEyeOff /> : <LuEye />}</button></div></div>
-                <div><label className="snp-label" htmlFor="confirmPassword">Confirm password</label><input autoComplete="new-password" className="snp-input" id="confirmPassword" maxLength={128} minLength={8} name="confirmPassword" onChange={updateField} placeholder="Type it again" required type={showPassword ? "text" : "password"} value={profile.confirmPassword} /></div>
-              </div>
-              <p className="text-xs font-semibold text-slate-500">Use at least 8 characters with an uppercase letter, lowercase letter, and number.</p>
-              <button className="snp-button-primary w-full" disabled={isSubmitting || Boolean(apiConfigurationError)} type="submit">{isSubmitting ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Creating account…</> : <><LuUserPlus />Create account and start</>}</button>
-            </form>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            requiredMark={false}
+          >
+            {/* 1. Full Name */}
+            <Form.Item
+              label={<span className="font-semibold text-slate-700 dark:text-slate-300">Full Name (ឈ្មោះរបស់អ្នក)</span>}
+              name="name"
+              rules={[{ required: true, message: "Please enter your name (សូមបញ្ចូលឈ្មោះរបស់អ្នក)" }]}
+            >
+              <Input
+                placeholder="ឧ. សុវណ្ណ គឹម ឬ Sovann Kim"
+                size="large"
+                onChange={handleNameChange}
+              />
+            </Form.Item>
+
+            {/* 2. Username */}
+            <Form.Item
+              label={<span className="font-semibold text-slate-700 dark:text-slate-300">Username (ឈ្មោះគណនី)</span>}
+              name="username"
+              rules={[
+                { required: true, message: "Please enter a username" },
+                { min: 3, message: "Username must be at least 3 characters" },
+                {
+                  pattern: usernamePattern,
+                  message: "Use lowercase letters, numbers, dots, or hyphens (ឧ. sovann)",
+                },
+              ]}
+              extra={
+                <span className="text-xs text-slate-400">
+                  ប្រើអក្សរតូច ឬលេខ សម្រាប់ Login (ឧ. sovann)
+                </span>
+              }
+            >
+              <Input
+                prefix={<LuUser className="text-slate-400 mr-1" />}
+                placeholder="sovann"
+                size="large"
+                autoCapitalize="none"
+              />
+            </Form.Item>
+
+            {/* 3. Password */}
+            <Form.Item
+              label={<span className="font-semibold text-slate-700 dark:text-slate-300">Password (លេខសម្ងាត់)</span>}
+              name="password"
+              rules={[
+                { required: true, message: "Please enter a password" },
+                { min: 6, message: "Password must be at least 6 characters (យ៉ាងតិច ៦ ខ្ទង់)" },
+              ]}
+            >
+              <Input.Password
+                prefix={<LuLock className="text-slate-400 mr-1" />}
+                placeholder="យ៉ាងតិច ៦ ខ្ទង់ (At least 6 characters)"
+                size="large"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span className="font-semibold text-slate-700 dark:text-slate-300">Recovery Key (ពាក្យគន្លឹះបង្កើត និងសង្គ្រោះគណនី)</span>}
+              name="securityAnswer"
+              rules={[
+                { required: true, message: "Please enter the recovery key (សូមបញ្ចូលពាក្យគន្លឹះ)" },
+                {
+                  validator: (_, value) => {
+                    const key = (value || "").trim();
+                    if (!key || key === "Admin.snpis@2013" || key.toLowerCase() === "admin.snpis@2013") {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error("Recovery Key មិនត្រឹមត្រូវទេ! សូមទាក់ទងលោកគ្រូ ឬអ្នកគ្រូ។")
+                    );
+                  },
+                },
+              ]}
+              extra={
+                <span className="text-xs text-slate-400">
+                  សូមសួរលោកគ្រូ ឬអ្នកគ្រូ ដើម្បីទទួលបាន Recovery Key សម្រាប់បង្កើតគណនី និងសង្គ្រោះលេខសម្ងាត់។
+                </span>
+              }
+            >
+              <Input.Password
+                prefix={<LuLock className="text-slate-400 mr-1" />}
+                placeholder="បញ្ចូល Recovery Key (ផ្ដល់ដោយលោកគ្រូ/អ្នកគ្រូ)"
+                size="large"
+                autoComplete="new-password"
+              />
+            </Form.Item>
+
+            <Form.Item className="mt-4 mb-0">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                loading={isSubmitting}
+                disabled={Boolean(apiConfigurationError)}
+                className="w-full font-semibold h-11 text-base"
+              >
+                Create Account (ចុះឈ្មោះ)
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="text-center mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <p className="m-0 text-sm text-slate-500 dark:text-slate-400">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-semibold text-[#52c41a] hover:underline"
+              >
+                Sign In (ចូលប្រើ)
+              </Link>
+            </p>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );

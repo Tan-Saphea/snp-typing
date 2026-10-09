@@ -21,11 +21,10 @@ test("all publishable seeded typing lessons contain 100-300 graphemes", () => {
   assert.deepEqual(invalid, []);
 });
 
-test("review-only source lessons remain unpublished and are not expanded", () => {
-  const reviewLessons = seedLessons.filter((lesson) => lesson.contentStatus === "needs_review");
+test("all seeded lessons are published and carry approved review status", () => {
+  const unpublished = seedLessons.filter((lesson) => !lesson.isPublished || lesson.source.reviewStatus !== "approved");
 
-  assert.ok(reviewLessons.length > 0);
-  assert.ok(reviewLessons.every((lesson) => lesson.isPublished === false));
+  assert.deepEqual(unpublished, []);
 });
 
 test("published fluency lessons use original sentences instead of repeated filler", () => {

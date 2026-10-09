@@ -1,7 +1,12 @@
 import { buildLessonTargetText, segmentGraphemes } from "@snp/shared";
+import { seedLessons } from "../src/seeds/lessonData.js";
 
 const apiUrl = process.env.SNP_SMOKE_API_URL ?? "http://127.0.0.1:5012/api";
 const password = process.env.SNP_SMOKE_PASSWORD;
+const expectedLessonCounts = {
+  en: seedLessons.filter((lesson) => lesson.language === "en").length,
+  km: seedLessons.filter((lesson) => lesson.language === "km").length,
+};
 
 if (!password) throw new Error("SNP_SMOKE_PASSWORD is required.");
 
@@ -49,9 +54,18 @@ function perfectResult(lesson) {
 }
 
 const username = `smoke-${Date.now().toString(36)}`;
+const recoveryQuestion = "Recovery Key";
+const recoveryAnswer = "Admin.snpis@2013";
 const registration = await request("/auth/register", {
   method: "POST",
-  body: JSON.stringify({ firstName: "Smoke", lastName: "Learner", username, password }),
+  body: JSON.stringify({
+    firstName: "Smoke",
+    lastName: "Learner",
+    username,
+    password,
+    securityQuestion: recoveryQuestion,
+    securityAnswer: recoveryAnswer,
+  }),
 }, 201);
 const authorization = { Authorization: `Bearer ${registration.data.accessToken}` };
 const english = await request("/lessons?language=en", { headers: authorization });
@@ -59,7 +73,9 @@ const englishBasics = english.data.lessons.filter(
   (lesson) => lesson.category === "keyboard-basics",
 );
 
-if (english.data.lessons.length !== 118) throw new Error(`Visible English lesson count is incorrect: ${english.data.lessons.length}.`);
+if (english.data.lessons.length !== expectedLessonCounts.en) {
+  throw new Error(`Visible English lesson count is incorrect: expected ${expectedLessonCounts.en}, received ${english.data.lessons.length}.`);
+}
 if (englishBasics[0].isLocked || !englishBasics[1].isLocked) {
   throw new Error("The first English lesson should be open and the second should be locked.");
 }
@@ -96,7 +112,9 @@ if (basicsAfter.length !== englishBasics.length) throw new Error("A saved result
 if (basicsAfter[1].isLocked) throw new Error("Passing the prerequisite did not unlock the next English lesson.");
 
 const khmer = await request("/lessons?language=km", { headers: authorization });
-if (khmer.data.lessons.length !== 68) throw new Error(`Visible Khmer lesson count is incorrect: ${khmer.data.lessons.length}.`);
+if (khmer.data.lessons.length !== expectedLessonCounts.km) {
+  throw new Error(`Visible Khmer lesson count is incorrect: expected ${expectedLessonCounts.km}, received ${khmer.data.lessons.length}.`);
+}
 const firstKhmer = khmer.data.lessons.find(
   (lesson) => lesson.category === "khmer-consonants" && lesson.order === 1,
 );
@@ -111,9 +129,32 @@ if (!savedKhmer.data.result.passed || savedKhmer.data.result.cpm <= 0) {
   throw new Error("Khmer grapheme result was not scored correctly.");
 }
 
+const computerSkills = await request("/lessons?type=computer-skill", {
+  headers: authorization,
+});
+if (computerSkills.data.lessons.length !== 20) {
+  throw new Error(`Computer Skills lesson count is incorrect: ${computerSkills.data.lessons.length}.`);
+}
+if (computerSkills.data.lessons[0].isLocked || !computerSkills.data.lessons[1].isLocked) {
+  throw new Error("The first Computer Skills lesson should be open and the second should be locked.");
+}
+const firstComputerSkill = await request(
+  `/lessons/${computerSkills.data.lessons[0].id}`,
+  { headers: authorization },
+);
+await request("/results", {
+  method: "POST",
+  headers: authorization,
+  body: JSON.stringify(perfectResult(firstComputerSkill.data.lesson)),
+}, 201);
+await request(
+  `/lessons/${computerSkills.data.lessons[1].id}`,
+  { headers: authorization },
+);
+
 const progress = await request("/progress/me", { headers: authorization });
 if (
-  progress.data.stats.lessonsCompleted < 2 ||
+  progress.data.stats.lessonsCompleted < 3 ||
   progress.data.languages.en.completedLessons < 1 ||
   progress.data.languages.km.completedLessons < 1 ||
   progress.data.recent.length < 2
@@ -121,4 +162,38 @@ if (
   throw new Error("Saved results did not update progress summaries.");
 }
 
-console.log("Self-registration, sequential lesson protection, results, Khmer scoring, and progress smoke tests passed.");
+const matches = await request("/auth/find-username", {
+  method: "POST",
+  body: JSON.stringify({ query: username }),
+});
+if (matches.data.length !== 1 || matches.data[0].username !== username) {
+  throw new Error("Account recovery did not find the newly registered learner.");
+}
+
+const verification = await request("/auth/verify-account", {
+  method: "POST",
+  body: JSON.stringify({ username }),
+});
+if (!verification.data.hasSecurityQuestion || verification.data.securityQuestion !== recoveryQuestion) {
+  throw new Error("Account recovery did not return the learner's recovery question.");
+}
+
+const recoveredPassword = "Recovered123!";
+const rejectedReset = await request("/auth/reset-password", {
+  method: "POST",
+  body: JSON.stringify({ username, newPassword: recoveredPassword, securityAnswer: "Wrong answer" }),
+}, 400);
+if (rejectedReset.error?.code !== "SECURITY_ANSWER_INCORRECT") {
+  throw new Error("Account recovery accepted an incorrect recovery answer.");
+}
+
+await request("/auth/reset-password", {
+  method: "POST",
+  body: JSON.stringify({ username, newPassword: recoveredPassword, securityAnswer: recoveryAnswer }),
+});
+await request("/auth/login", {
+  method: "POST",
+  body: JSON.stringify({ username, password: recoveredPassword }),
+});
+
+console.log("Self-registration, recovery, English, Khmer, Computer Skills, sequential protection, results, and progress smoke tests passed.");

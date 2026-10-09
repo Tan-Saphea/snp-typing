@@ -1,16 +1,27 @@
-import { LuKeyboard } from "react-icons/lu";
+import { Card, Spin } from "antd";
+import Brand from "./Brand.jsx";
 
 export default function FullPageLoader({ message = "Loading…" }) {
   return (
     <main
-      className="snp-app-canvas grid min-h-screen place-items-center p-6"
+      className="grid min-h-screen place-items-center bg-slate-50 p-6 dark:bg-slate-950"
       aria-busy="true"
     >
-      <div className="snp-result-dialog w-full max-w-sm p-8 text-center">
-        <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl border-2 border-slate-900 bg-primary-600 text-white shadow-[0_5px_0_0_#172033]" aria-hidden="true"><LuKeyboard size={27} /><span className="absolute -inset-2 animate-spin rounded-[1.35rem] border-2 border-transparent border-t-primary-500" /></div>
-        <p className="mt-5 font-black text-slate-700">{message}</p>
-        <p className="mt-1 text-xs font-bold text-slate-400">SNP Typing</p>
-      </div>
+      <Card
+        variant="outlined"
+        className="w-full max-w-sm rounded-3xl p-6 text-center shadow-xl dark:border-slate-800"
+      >
+        <div className="flex justify-center mb-6">
+          <Brand />
+        </div>
+        <Spin size="large" />
+        <p className="m-0 mt-5 font-black text-slate-800 dark:text-slate-200">
+          {message}
+        </p>
+        <p className="m-0 mt-1 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          SNP Typing
+        </p>
+      </Card>
     </main>
   );
 }

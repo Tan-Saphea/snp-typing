@@ -36,8 +36,17 @@ describe("typing progress", () => {
     expect(recovered).toEqual({ acceptedValue: "កម", errors: 0 });
   });
 
-  it("accepts the NIDA zero-width space for a visible lesson space", () => {
-    const result = applyGuidedInput({ targetText: "ខ្ញុំ រៀន", currentInput: "ខ្ញុំ", proposedInput: "ខ្ញុំ\u200b", language: "km" });
-    expect(result).toEqual({ acceptedValue: "ខ្ញុំ ", errors: 0 });
+  it("accepts space for a visible lesson space in Khmer only with Shift + Space", () => {
+    // Visible space (produced by Shift + Space) is accepted
+    const spaceInput = applyGuidedInput({ targetText: "ខ្ញុំ រៀន", currentInput: "ខ្ញុំ", proposedInput: "ខ្ញុំ ", language: "km" });
+    expect(spaceInput).toEqual({ acceptedValue: "ខ្ញុំ ", errors: 0 });
+
+    // Unshifted Space (ZWSP) is rejected for a visible lesson space, requiring Shift + Space
+    const zwspInput = applyGuidedInput({ targetText: "ខ្ញុំ រៀន", currentInput: "ខ្ញុំ", proposedInput: "ខ្ញុំ\u200b", language: "km" });
+    expect(zwspInput).toEqual({ acceptedValue: "ខ្ញុំ", errors: 1 });
+
+    // Unshifted Space (ZWSP) is accepted when target actually expects ZWSP
+    const zwspTarget = applyGuidedInput({ targetText: "ខ្ញុំ\u200bរៀន", currentInput: "ខ្ញុំ", proposedInput: "ខ្ញុំ\u200b", language: "km" });
+    expect(zwspTarget).toEqual({ acceptedValue: "ខ្ញុំ\u200b", errors: 0 });
   });
 });
