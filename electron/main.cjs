@@ -27,21 +27,33 @@ const developmentUrl = process.env.ELECTRON_RENDERER_URL;
 const isDevelopment = Boolean(developmentUrl);
 let rendererServer = null;
 
-function reserveRendererPort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : null;
-      server.close((error) => {
-        if (error) reject(error);
-        else if (port) resolve(port);
-        else reject(new Error("Could not reserve a renderer port."));
-      });
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(250);
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(false);
     });
+    socket.once("error", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.connect(port, "127.0.0.1");
   });
+}
+
+async function findAvailablePort(startPort = 38123) {
+  for (let port = startPort; port < startPort + 50; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  return startPort;
 }
 
 function getStandaloneServerRoot() {
@@ -52,13 +64,18 @@ function getStandaloneServerRoot() {
     ".next",
     "standalone",
   );
-  const candidates = [path.join(unpackedRoot, "client"), unpackedRoot];
+  const candidates = [
+    path.join(unpackedRoot, "client"),
+    unpackedRoot,
+    path.join(__dirname, "..", "client", ".next", "standalone", "client"),
+    path.join(__dirname, "..", "client", ".next", "standalone"),
+  ];
   return candidates.find((candidate) =>
     fs.existsSync(path.join(candidate, "server.js")),
   );
 }
 
-function waitForRenderer(url, timeoutMs = 15_000) {
+function waitForRenderer(url, timeoutMs = 35_000) {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
 
@@ -87,7 +104,7 @@ async function startProductionRenderer() {
     throw new Error("The packaged Next.js renderer was not found.");
   }
 
-  const port = await reserveRendererPort();
+  const port = await findAvailablePort();
   const rendererUrl = `http://127.0.0.1:${port}`;
   rendererServer = spawn(process.execPath, [path.join(serverRoot, "server.js")], {
     cwd: serverRoot,
@@ -102,10 +119,15 @@ async function startProductionRenderer() {
     windowsHide: true,
   });
 
-  let serverErrorOutput = "";
+  let serverLogs = "";
+  if (rendererServer.stdout) {
+    rendererServer.stdout.on("data", (data) => {
+      serverLogs += data.toString();
+    });
+  }
   if (rendererServer.stderr) {
     rendererServer.stderr.on("data", (data) => {
-      serverErrorOutput += data.toString();
+      serverLogs += data.toString();
     });
   }
 
@@ -114,8 +136,8 @@ async function startProductionRenderer() {
       reject(new Error(`Failed to start Next.js renderer process: ${error.message}`));
     });
     rendererServer.once("exit", (code) => {
-      const errorMsg = serverErrorOutput.trim()
-        ? `\n\nRenderer output:\n${serverErrorOutput}`
+      const errorMsg = serverLogs.trim()
+        ? `\n\nRenderer output:\n${serverLogs}`
         : "";
       reject(new Error(`The Next.js renderer stopped with code ${code}.${errorMsg}`));
     });

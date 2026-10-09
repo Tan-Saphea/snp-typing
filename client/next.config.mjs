@@ -30,6 +30,9 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(process.cwd(), ".."),
   poweredByHeader: false,
+  images: {
+    unoptimized: true,
+  },
   transpilePackages: ["@snp/shared"],
   async headers() {
     return [

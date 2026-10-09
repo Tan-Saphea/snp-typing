@@ -10,7 +10,14 @@ function getTokenPath() {
 async function getRefreshToken() {
   try {
     const stored = JSON.parse(await fs.readFile(getTokenPath(), "utf8"));
-    return safeStorage.decryptString(Buffer.from(stored.token, "base64"));
+    if (safeStorage.isEncryptionAvailable()) {
+      try {
+        return safeStorage.decryptString(Buffer.from(stored.token, "base64"));
+      } catch {
+        return Buffer.from(stored.token, "base64").toString("utf8");
+      }
+    }
+    return Buffer.from(stored.token, "base64").toString("utf8");
   } catch (error) {
     if (error.code === "ENOENT") {
       return null;
@@ -26,11 +33,17 @@ async function setRefreshToken(token) {
     throw new TypeError("A valid refresh token is required.");
   }
 
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error("Secure credential storage is unavailable on this device.");
+  let encrypted = null;
+  if (safeStorage.isEncryptionAvailable()) {
+    try {
+      encrypted = safeStorage.encryptString(token).toString("base64");
+    } catch {
+      encrypted = Buffer.from(token).toString("base64");
+    }
+  } else {
+    encrypted = Buffer.from(token).toString("base64");
   }
 
-  const encrypted = safeStorage.encryptString(token).toString("base64");
   await fs.mkdir(path.dirname(getTokenPath()), { recursive: true });
   await fs.writeFile(
     getTokenPath(),

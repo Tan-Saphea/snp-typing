@@ -17,7 +17,7 @@ asarUnpack:
 extraMetadata:
   main: electron/main.cjs
 win:
-  icon: build/icon.png
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
@@ -32,7 +32,7 @@ nsis:
   shortcutName: SNP Typing
   runAfterFinish: true
   deleteAppDataOnUninstall: false
-  differentialPackage: true
+  differentialPackage: false
   guid: "org.snp.typing"
   uninstallDisplayName: SNP Typing
   installerIcon: build/icon.ico
