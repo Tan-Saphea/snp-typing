@@ -26,8 +26,9 @@ win:
         - x64
 nsis:
   artifactName: SNP-Typing-Setup.${ext}
-  oneClick: true
-  perMachine: false
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: SNP Typing
@@ -39,6 +40,7 @@ nsis:
   uninstallerIcon: build/icon.ico
 portable:
   artifactName: SNP-Typing-Portable.${ext}
+
 
 
 
