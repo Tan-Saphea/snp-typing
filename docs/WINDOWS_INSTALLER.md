@@ -12,36 +12,40 @@ npm test
 npm run dist:win
 ```
 
-The finished x64 installer is written to:
+The finished x64 binaries are written to:
 
 ```text
+release/SNP-Typing-Portable.exe
 release/SNP-Typing-Setup.exe
+release/SNP-Typing-v0.1.3-win-x64.zip
 ```
 
-The application uses `build/icon.png`, and the setup/uninstaller wizard uses the multi-resolution `build/icon.ico`. Both contain the SNP school logo. Release binaries are ignored by Git because the installer is larger than GitHub's normal source-file limit; upload it as a GitHub Release asset instead.
+The application uses `build/icon.png`, and the setup/uninstaller wizard uses the multi-resolution `build/icon.ico`. Both contain the SNP school logo. Release binaries are ignored by Git because the files exceed GitHub repository limits; upload them as GitHub Release assets instead.
 
-## Install on Windows
+## Available Windows Packages
 
-1. Download `SNP-Typing-Setup.exe` from the GitHub release.
-2. Double-click the installer.
-3. If Windows SmartScreen appears for an unsigned build, verify the publisher/source before choosing **More info** and **Run anyway**.
-4. Choose whether to install for the current user or all users. Current-user installation does not normally require administrator access.
-5. Choose the installation folder.
-6. Keep the desktop and Start Menu shortcuts selected, then choose **Install**.
-7. Choose **Finish** to open SNP Typing.
+### 1. Portable Standalone Executable (SNP-Typing-Portable.exe)
+- Zero installation required and does not require Administrator permissions.
+- Double-click to launch SNP Typing directly.
+- Automatically connects to existing student accounts and progress in `%APPDATA%\SNP Typing\offline-data.json`.
 
-The application is ready to use offline immediately after installation. Create a learner account on the computer, then sign in with that local account. Accounts and progress remain on that Windows user profile unless the application is uninstalled.
+### 2. Direct Application Folder (SNP-Typing-v0.1.3-win-x64.zip)
+- Direct zip archive of the application files.
+- Can be extracted anywhere to run `SNP Typing.exe` portably.
+- Can be copied directly into `C:\Program Files\SNP Typing` to update in-place without running setup wizards.
 
-## Uninstall completely
+### 3. Standard Installer (SNP-Typing-Setup.exe)
+- Standard NSIS installer that installs to `C:\Program Files\SNP Typing` (all users) and updates Desktop and Start Menu shortcuts.
+- Requires Administrator elevation for `C:\Program Files\`.
+- Preserves all student accounts and progress across updates.
 
-1. Open **Windows Settings**.
-2. Go to **Apps > Installed apps**.
-3. Find **SNP Typing**.
-4. Select the menu beside it and choose **Uninstall**.
-5. Confirm the uninstall wizard.
+## Upgrading an Existing Installation
 
-The uninstaller removes the installed program, shortcuts, local learner accounts, and offline progress data. Export or print any progress report that must be retained before uninstalling.
+1. **Option A (Zero-Setup Portable)**: Download `SNP-Typing-Portable.exe` and launch it directly. All existing student data and progress remain intact.
+2. **Option B (Direct Folder Overwrite)**: Close SNP Typing, extract `SNP-Typing-v0.1.3-win-x64.zip`, and copy the contents of `SNP Typing` into `C:\Program Files\SNP Typing` selecting "Replace files".
+3. **Option C (Installer Upgrade)**: Close any running instances of SNP Typing. If a previous installer process is suspended in the background, terminate `SNP-Typing-Setup.exe` in Windows Task Manager, then right-click `SNP-Typing-Setup.exe` and choose "Run as administrator".
 
-## Upgrade
+## Student Data Preservation
 
-Run a newer `SNP-Typing-Setup.exe`. The stable application ID `org.snp.typing` lets NSIS replace the installed version without creating a second application entry.
+All student accounts, progress, stars, and typing test records are preserved in `%APPDATA%\SNP Typing\offline-data.json`. Automatic `.bak` safety backups and fallback paths guarantee data safety across versions.
+
