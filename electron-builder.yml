@@ -33,7 +33,8 @@ nsis:
   runAfterFinish: true
   deleteAppDataOnUninstall: false
   differentialPackage: false
-  guid: "org.snp.typing"
+  include: build/installer.nsh
   uninstallDisplayName: SNP Typing
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
+

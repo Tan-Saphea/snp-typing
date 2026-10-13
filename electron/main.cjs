@@ -246,8 +246,17 @@ function registerIpcHandlers(offlineApi) {
 }
 
 app.whenReady().then(async () => {
+  const primaryDataPath = path.join(app.getPath("userData"), "offline-data.json");
+  const appDataRoot = app.getPath("appData");
+  const fallbackPaths = [
+    path.join(appDataRoot, "SNP Typing", "offline-data.json"),
+    path.join(appDataRoot, "snp-typing", "offline-data.json"),
+    path.join(app.getPath("home"), ".snp-typing", "offline-data.json"),
+  ].filter((candidate) => path.resolve(candidate) !== path.resolve(primaryDataPath));
+
   const offlineApi = createOfflineApi({
-    dataPath: path.join(app.getPath("userData"), "offline-data.json"),
+    dataPath: primaryDataPath,
+    fallbackPaths,
     lessonsPath: path.join(__dirname, "resources", "lessons.json"),
   });
   registerIpcHandlers(offlineApi);

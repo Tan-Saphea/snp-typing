@@ -102,8 +102,9 @@ function chooseBestResult(current, candidate) {
 }
 
 class OfflineApi {
-  constructor({ dataPath, lessonsPath }) {
+  constructor({ dataPath, fallbackPaths = [], lessonsPath }) {
     this.dataPath = dataPath;
+    this.fallbackPaths = Array.isArray(fallbackPaths) ? fallbackPaths : [];
     this.lessonsPath = lessonsPath;
     this.database = null;
     this.lessons = [];
@@ -135,11 +136,9 @@ class OfflineApi {
     this.lessons = lessonBundle.lessons;
     this.lessonsById = new Map(this.lessons.map((lesson) => [lesson.id, lesson]));
 
+    let loaded = null;
     try {
-      this.database = JSON.parse(await fs.readFile(this.dataPath, "utf8"));
-      this.database.users ??= [];
-      this.database.sessions ??= [];
-      this.database.results ??= [];
+      loaded = JSON.parse(await fs.readFile(this.dataPath, "utf8"));
     } catch (error) {
       if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error;
 
@@ -147,10 +146,46 @@ class OfflineApi {
         const recoveryPath = `${this.dataPath}.corrupt-${Date.now()}`;
         await fs.rename(this.dataPath, recoveryPath).catch(() => {});
       }
-
-      this.database = { schemaVersion: 1, users: [], sessions: [], results: [] };
-      await this.save();
     }
+
+    if (!loaded || (!loaded.users?.length && !loaded.results?.length)) {
+      for (const fallback of this.fallbackPaths) {
+        try {
+          const candidate = JSON.parse(await fs.readFile(fallback, "utf8"));
+          if (candidate && (candidate.users?.length || candidate.results?.length)) {
+            loaded = candidate;
+            break;
+          }
+        } catch {
+          // Ignore non-existent or invalid fallback candidates
+        }
+      }
+    }
+
+    if (loaded) {
+      this.database = loaded;
+      this.database.schemaVersion ??= 1;
+      this.database.users ??= [];
+      this.database.sessions ??= [];
+      this.database.results ??= [];
+
+      if (this.database.users.length > 0 || this.database.results.length > 0) {
+        try {
+          await fs.mkdir(path.dirname(this.dataPath), { recursive: true });
+          await fs.writeFile(
+            `${this.dataPath}.bak`,
+            `${JSON.stringify(this.database, null, 2)}\n`,
+            "utf8",
+          );
+        } catch {
+          // Non-blocking safety backup
+        }
+      }
+    } else {
+      this.database = { schemaVersion: 1, users: [], sessions: [], results: [] };
+    }
+
+    await this.save();
   }
 
   async save() {

@@ -222,3 +222,84 @@ test("generated curriculum is available offline with independent English and Khm
   assert.equal(progress.body.data.computerSkills.totalLessons, 20);
   assert.equal(progress.body.data.stats.lessonsCompleted, 1);
 });
+
+test("offline API seamlessly migrates student accounts, stars, and history from previous version fallback paths", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "snp-migration-test-"));
+  context.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const lessonsPath = path.join(directory, "lessons.json");
+  const legacyDataPath = path.join(directory, "legacy-offline-data.json");
+  const newPrimaryPath = path.join(directory, "new-primary-offline-data.json");
+
+  await fs.writeFile(
+    lessonsPath,
+    JSON.stringify({
+      schemaVersion: 1,
+      lessons: [
+        lesson(),
+        lesson({ id: secondLessonId, title: "Second Lesson", slug: "second-lesson", order: 2, prerequisiteLesson: firstLessonId }),
+      ],
+    }),
+  );
+
+  // Simulate an older installation where a student registered and completed lesson 1
+  const oldApi = createOfflineApi({ dataPath: legacyDataPath, lessonsPath });
+  const reg = await oldApi.request({
+    method: "POST",
+    path: "/auth/register",
+    data: {
+      name: "Existing Student",
+      username: "student.v1",
+      password: "Password123",
+      securityQuestion: "Recovery Key",
+      securityAnswer: "Admin.snpis@2013",
+      gender: "female",
+    },
+  });
+  assert.equal(reg.status, 201);
+  const oldToken = reg.body.data.accessToken;
+
+  // Student completes lesson 1 with 3 stars
+  const resultRes = await oldApi.request({
+    method: "POST",
+    path: "/results",
+    accessToken: oldToken,
+    data: resultPayload(firstLessonId),
+  });
+  assert.equal(resultRes.status, 201);
+  assert.equal(resultRes.body.data.result.stars, 3);
+
+  // Now simulate running the newly upgraded version where newPrimaryPath does not exist yet
+  const upgradedApi = createOfflineApi({
+    dataPath: newPrimaryPath,
+    fallbackPaths: [legacyDataPath],
+    lessonsPath,
+  });
+
+  // Student logs in on the new version with their old credentials
+  const loginRes = await upgradedApi.request({
+    method: "POST",
+    path: "/auth/login",
+    data: {
+      username: "student.v1",
+      password: "Password123",
+    },
+  });
+  assert.equal(loginRes.status, 200);
+  const newToken = loginRes.body.data.accessToken;
+
+  // Verify their progress, stars, and unlocked lesson are 100% intact
+  const lessonsList = await upgradedApi.request({ method: "GET", path: "/lessons", accessToken: newToken });
+  assert.equal(lessonsList.status, 200);
+  const secondLesson = lessonsList.body.data.lessons.find((l) => l.id === secondLessonId);
+  assert.equal(secondLesson.isLocked, false);
+
+  const meProgress = await upgradedApi.request({ method: "GET", path: "/progress/me", accessToken: newToken });
+  assert.equal(meProgress.status, 200);
+  assert.equal(meProgress.body.data.stats.lessonsCompleted, 1);
+  assert.equal(meProgress.body.data.stats.stars, 3);
+
+  // Verify that backup file was also created
+  const bakExists = await fs.stat(`${newPrimaryPath}.bak`).then(() => true).catch(() => false);
+  assert.equal(bakExists, true);
+});
+
