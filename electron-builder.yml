@@ -1,6 +1,5 @@
 appId: org.snp.typing
 productName: SNP Typing
-artifactName: SNP-Typing-Setup.${ext}
 asar: true
 compression: maximum
 directories:
@@ -22,11 +21,13 @@ win:
     - target: nsis
       arch:
         - x64
+    - target: portable
+      arch:
+        - x64
 nsis:
-  oneClick: false
+  artifactName: SNP-Typing-Setup.${ext}
+  oneClick: true
   perMachine: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: SNP Typing
@@ -36,5 +37,8 @@ nsis:
   uninstallDisplayName: SNP Typing
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
+portable:
+  artifactName: SNP-Typing-Portable.${ext}
+
 
 
